@@ -7,6 +7,7 @@ and processes the files by embedding their content into a FAISS vector database 
 import os
 import sys
 import uuid
+from pydantic import UUID4
 import json
 from datetime import datetime,timezone
 from fastapi import UploadFile
@@ -59,16 +60,16 @@ def get_sharepoint_context(
 
 async def upload_file_to_sharepoint(
         file: UploadFile, 
-        userid: str ,
         chat_type: str,
-        db: Session
+        db: Session,
+        chatid: UUID4 = None,
+
         ) -> dict: 
     """
     Uploads a PDF file to SharePoint under a dynamically created folder.
     
     Parameters:
         file (UploadFile): The PDF file to be uploaded.
-        userid (str): Identifier for the user.
         chat_type (str): Type of the chat for which chat session is created.
         db (Session): Postgresql session.
     
@@ -79,10 +80,7 @@ async def upload_file_to_sharepoint(
         HTTPException: When upload fails.
     """
     try:
-        logging.info(f"Received file upload request: {file.filename} with userid: {userid}")
-
-        chatid = str(uuid.uuid4())
-        logging.info(f"Generated new chatid: {chatid}")
+        logging.info(f"Received file upload request: {file.filename}")
 
         ctx = get_sharepoint_context()
         uploads_folder_path = f"{SP_LIBRARY_TITLE_UP}/{SP_RENAULT}"
@@ -111,7 +109,6 @@ async def upload_file_to_sharepoint(
         gu_id = str(uuid.uuid4())
 
         upload_entry = db_info.UploadFileInfo(
-                        user_id=userid,
                         chat_id=chatid,
                         file_id=gu_id,
                         chat_type=chat_type,
@@ -130,7 +127,6 @@ async def upload_file_to_sharepoint(
                 {"sender": "bot", "text": "I have received your uploaded file. The analysis has been successfully completed. You can now ask any questions."}
         ]
         chat_entry = db_info.ChatInfo(
-            user_id=userid,
             chat_id=chatid,
             chat_type='-'.join(chat_type.split('-')[:2]),
             access_date=datetime.now(timezone.utc),
@@ -155,7 +151,6 @@ async def upload_file_to_sharepoint(
 
 
 async def embed_pdf_in_vectorstore(
-        user_id: str,
         chatid: str,
         gu_id: str = None
         ) -> FAISS_DB:
@@ -163,7 +158,6 @@ async def embed_pdf_in_vectorstore(
     Processes an uploaded PDF file for embedding.
    
     Parameters:
-        user_id (str): Identifier for the user.
         chatid (str): Identifier for the chat session.
         gu_id (str): gu_id of the uploaded PDF file.
    
@@ -194,7 +188,6 @@ async def embed_pdf_in_vectorstore(
                 vectorstore=uploaded_db,
                 source="uploaded",
                 gu_id=gu_id,
-                user_id = user_id
             )
     
             logging.info(f"Embedding successful for: {chatid}")
@@ -204,7 +197,7 @@ async def embed_pdf_in_vectorstore(
     except Exception as e:
         with db_info.get_db_context() as db:
             # remove the added file information from UploadFileInfo if embedding has not happened
-            record_to_delete = db.query(db_info.UploadFileInfo).filter_by(file_id=gu_id, user_id=user_id, chat_id=chatid).first() 
+            record_to_delete = db.query(db_info.UploadFileInfo).filter_by(file_id=gu_id, chat_id=chatid).first() 
             embedded_data = db.query(db_info.FileInfo).filter_by(file_id=gu_id).first()
             if record_to_delete and embedded_data and not embedded_data.embed_done:
                 db.delete(record_to_delete)
@@ -216,7 +209,6 @@ async def embed_pdf_in_vectorstore(
 
 
 async def get_embeded_db(
-        userid: str,
         file_name: str=None,
         gu_id: str=None,
         db: Session = None
@@ -225,7 +217,6 @@ async def get_embeded_db(
     Identify the vectorstore in which embeddings of the corresponding file is present.
    
     Parameters:
-        userid (str): Identifier of  user
         file_name (str): Name of the file
         gu_id (str): UUID of the file (if available)
         db (Session): Postgresql session.
@@ -246,8 +237,7 @@ async def get_embeded_db(
                 logging.info(f"File exists in sharepoint: {filepath}")
 
         elif file_name:
-            fileinfo = db.query(db_info.FileInfo).filter((db_info.FileInfo.user_id == userid) | (db_info.FileInfo.user_id == None),
-                                                        (db_info.FileInfo.file_name==file_name),(db_info.FileInfo.source=="sharepoint")).first()
+            fileinfo = db.query(db_info.FileInfo).filter((db_info.FileInfo.file_name==file_name),(db_info.FileInfo.source=="sharepoint")).first()
 
             if not fileinfo:
                 logging.error(f"File '{file_name}' does not exist in sharepoint.")
@@ -264,29 +254,11 @@ async def get_embeded_db(
     
         # Extract file name and get folder name
         normalized_path = os.path.normpath(filepath)
-
-        # # Check for uploaded files (Deprecated)
-        # path_parts = normalized_path.split(os.sep)
-        # folder_identifier = path_parts[-2]
-        # def is_valid_uuid(value):
-        #     try:
-        #         uuid.UUID(str(value))
-        #         return True
-        #     except ValueError:
-        #         return False
             
         # Load vectorstore based on folder_identifier
         if SP_RENAULT in normalized_path:
             vectorstore= RENAULT_DB
             logging.info(f"The given file is found in vectorstore:{vectorstore.persist_directory}")
-
-        # # Check for uploaded files (Deprecated)
-        # elif is_valid_uuid(folder_identifier):  # Assuming UUID is 36 characters
-        #     vectorstore_path = f'{UPLOAD_DIRECTORY}/{folder_identifier}'
-        #     if os.path.exists(vectorstore_path):
-        #         vectorstore=FAISS_DB(embedding_function=EMBEDDINGS,persist_directory=vectorstore_path)
-        #         vectorstore.load()
-        #         logging.info(f"The given file is found in vectorstore:{vectorstore_path}")
 
         else:
             logging.error(f"Unable to determine vectorstore path for: {normalized_path}")

@@ -8,4 +8,5 @@ app/__init__.py
 app/exception.py
 app/logger.py
 app/main.py
+app/middleware.py
 app/utils.py

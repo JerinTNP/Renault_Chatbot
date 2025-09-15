@@ -5,6 +5,7 @@ Actions - Generic, Specific, New Proposal
 # Import modules
 import sys,os,shutil
 import re
+import json
 from typing import List, Dict, Any
 from pydantic import UUID4
 from fastapi import Depends
@@ -18,11 +19,13 @@ from sqlalchemy.orm import Session
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import END, StateGraph, START
 from langgraph.graph.state import CompiledStateGraph
+from app.info import db_info
+from sqlalchemy import text
 
 from app import utils
 from app.info.db_info import FileInfo,get_db,ChatInfo,UploadFileInfo
 from app.models.vectorstore import FAISS_DB
-from app.models.prompts import HISTORY_PROMPT, CONTEXT_PROMPT, ROUTE_PROMPT, NOT_ANSWERABLE_PROMPT																   
+from app.models.prompts import HISTORY_PROMPT, CONTEXT_PROMPT, ROUTE_PROMPT_RENAULT, NOT_ANSWERABLE_PROMPT, SQL_PROMPT																   
 from app.info.sharepoint_info import SP_RENAULT, SP_LIBRARY_TITLE_UP
 from app.info.agent_info import GraphState, RouteQuery
 from app.logger import logging 
@@ -202,134 +205,6 @@ def create_chain(
 
 ##################################### SPECIFIC ########################################
 
-def search_files_by_keyword(
-    db: Session,
-    keyword: str,
-    limit: int = 10,
-) -> List[Dict[str, any]]:
-    """
-    Searches for files in the database based on a keyword, returning exact and partial matches.
- 
-    Exact matches are determined by checking if the file name contains the full keyword (case-insensitive).
-    Partial matches are found by splitting the keyword into parts and searching for file names containing any of those parts,
-    excluding any results already found in exact matches.
- 
-    Parameters:
-        db (Session)    : SQLAlchemy database session used to query the FileInfo table.
-        keyword (str)   : The keyword used to search file names.
-        limit (int)     : Optional. Maximum number of results to return (default is 10).
- 
-    Returns:
-        (List[Dict[str, any]]) : A list of dictionaries with file details. Each dictionary contains:
-                                - "file_name": Name of the file
-                                - "gu_id": Unique identifier of the file (converted to string)
-                                - "link_uri": Either the link URI or the local file path
-    """
-    try:
-        logging.info(f"Searching files with matchimg keyword : {keyword}")
-
-        # Search for exact match filenames
-        sentence = keyword.split(".")[0]
-
-        exact_matches = db.query(FileInfo.file_name, FileInfo.gu_id, FileInfo.link_uri, FileInfo.file_path).filter(
-            (FileInfo.user_id == None) , FileInfo.file_path.like(f"%{SP_RENAULT}%"), FileInfo.file_name.ilike(f'%{sentence}%')
-        ).all()
-
-        logging.info(f"{len(exact_matches)} exact matches found")
- 
-        # Splits the sentence for partial search
-        parts = [p for p in re.split(r'[\s\W]+',sentence)]
-       
-        # Get partially matching filenames
-        partial_matches_queries = []
- 
-        for part in parts:
-            partial_matches_queries.append(
-                db.query(FileInfo.file_name, FileInfo.gu_id, FileInfo.link_uri, FileInfo.file_path).filter(
-                    FileInfo.file_name.op("~*")(fr'(^|[^a-zA-Z]){part}') ,
-                    FileInfo.file_path.like(f"%{SP_RENAULT}%"),
-                    (FileInfo.user_id == None),
-                    # Exclude exact matches to avoid duplicates
-                    ~FileInfo.file_name.ilike(f'%{sentence}%')
-                )
-            ) 
- 
-        # Union all partial match queries
-        partial_matches_query = partial_matches_queries[0]
-        for query in partial_matches_queries[1:]:
-            partial_matches_query = partial_matches_query.union(query)
-		
-        # Execute the query
-        partial_matches = partial_matches_query.limit(limit).all()
-        #print(partial_matches)
-   
-        logging.info(f"{len(partial_matches)} partial matches found")
-
-        # Combine results
-        results = []
-   
-        # Add exact matches first
-        for file_name, gu_id, link_uri, file_path in exact_matches:
-            if link_uri:
-                results.append((file_name, gu_id, link_uri))
-           
-            else:
-                results.append((file_name, gu_id, file_path))
- 
-        # Add partial matches that aren't already in results
-        existing_guids = {guid for _, guid, _ in results}
-        for file_name, gu_id, link_uri, file_path in partial_matches:
-            if gu_id not in existing_guids:
-                if link_uri:
-                    results.append((file_name, gu_id, link_uri))
-               
-                else:
-                    results.append((file_name, gu_id, file_path))
-                existing_guids.add(gu_id)
-   
-        # Limit the total number of results
-        results = results[:limit]
-   
-        # Format the results as a list of dictionaries
-        file_responses = [
-            {"file_name": file_name, "gu_id": str(gu_id), "link_uri": link_uri}
-            for file_name, gu_id, link_uri in results
-        ]
- 
-        def sort_key(d):
-            """
-            Sort files based on the given keyword.
-            More parts = higher priority (-count_found)
-            Earlier position = better (lower pos)
-            """
-            file_name = d['file_name'].lower()
-            key = []
-            count_found = 0
- 
-            # Loop parts in order (respects parts list order)
-            for portion in parts:
-                search_part = portion.lower()
-                pos = file_name.find(search_part)
- 
-                if pos != -1:
-                    count_found += 1
-                    key.append(pos)
-                else:
-                    key.append(float('inf'))  # Penalize missing
- 
-            return (-count_found, *key)
- 
-        file_responses.sort(key=sort_key)
- 
-        return file_responses
- 
-    except Exception as e:
-        error_message = get_error_message_detail(e, sys)
-        logging.error(error_message)
-        raise InternalError("An error occurred while searching for similar files: " + str(e))
-    
-
-
 # Copying Embeddings
 async def single_file_loader_embedding(
         gu_id: UUID4,
@@ -392,7 +267,7 @@ async def create_specific_chain(
         # Create new vectorstore to which the embeddings of the specified files are copied
         local_faiss = FAISS_DB(embedding_function=utils.EMBEDDINGS, persist_directory=persist_path)
         local_faiss.load()
-        logging.info(f"New vectrstore created at : {persist_path}")
+        logging.info(f"New vectorstore created at : {persist_path}")
 
         # Copy embeddings of the file to the new vectorstore
         local_faiss = await single_file_loader_embedding(gu_id=gu_id, vectorstore=vectorstore, local_faiss=local_faiss)
@@ -409,13 +284,12 @@ async def create_specific_chain(
     
 
 
-def embed_failure_cleaning(db: Session,chatid:UUID4 = None, userid:UUID4 = None) -> None:
+def embed_failure_cleaning(db: Session,chatid:UUID4 = None) -> None:
     """
     Remove saved data from DB if embedding fails.
     Parameters:
         db (Session)    : SQLAlchemy database session used to query the FileInfo table.
         chatid (UUID4)  : The chat ID
-        userid (UUID4)  : The user ID
     """
 
     logging.info(f"Removing saved chat data for {chatid} due to embedding failure")
@@ -454,10 +328,289 @@ def embed_failure_cleaning(db: Session,chatid:UUID4 = None, userid:UUID4 = None)
     logging.info(f"Deleted {deleted_count} record(s) from ChatInfo table for chatID {chatid}")
 
     # 6. Remove from chat_sessions
-    if userid in utils.chat_sessions and chatid in utils.chat_sessions[userid]:
-        del utils.chat_sessions[userid][chatid]
-        logging.info(f"Removed chat_id {chatid} from chat_sessions for user {userid}")
+    if chatid in utils.chat_sessions:
+        del utils.chat_sessions[chatid]
+        logging.info(f"Removed chat_id {chatid} from chat_sessions")
 
-        if not utils.chat_sessions[userid]:  # Clean up empty user entry
-            del utils.chat_sessions[userid]
-            logging.info(f"Removed user {userid} from chat_sessions (no chats left)")
+
+
+
+################# RENAULT SPECIFIC ##############
+
+########################################
+# DB Query Executor
+########################################
+def run_sql_query(query: str):
+    """Executes the generated SQL query on PostgreSQL and returns the result."""
+    logging.info(f"Executing SQL: {query}")
+    try:
+        with db_info.SessionLocal() as db:
+            result = db.execute(query).mappings().all()
+            return [dict(row) for row in result] if result else []
+    except Exception as e:
+        logging.error(f"SQL Execution Error: {e}")
+        return {"error": str(e)}
+
+
+########################################
+# Postgres Chain Creator
+########################################
+from sqlalchemy import text  # <-- add this at the top
+
+def create_postgres_chain(
+    chat_history: list = None,
+    chat_model: BaseChatOpenAI = utils.CHAT_MODEL,
+    sql_prompt: ChatPromptTemplate = SQL_PROMPT
+) -> tuple[Any, list]:
+    """
+    Creates a chain that:
+    1. Reformulates question based on chat history.
+    2. Generates SQL using LLM.
+    3. Executes SQL on PostgreSQL.
+    4. Returns the database result.
+    """
+    try:
+        logging.info("Creating Postgres chain")
+
+        if chat_history is None:
+            chat_history = []
+
+        def get_content_from_response(response):
+            return response.content.strip()
+
+        def clean_sql(sql: str) -> str:
+            """Remove markdown code fences and optional 'sql' tag."""
+            sql = sql.strip()
+            if sql.startswith("```"):
+                sql = sql.strip("`")  # remove all backticks
+                if sql.lower().startswith("sql"):
+                    sql = sql[3:]
+            sql = sql.strip()
+            return sql
+
+
+        def execute_sql(sql: str):
+            logging.info(f"Executing SQL: {sql}")
+            try:
+                sql = clean_sql(sql)  # Remove ```sql fences etc.
+                with db_info.get_db_context() as db:
+                    result = db.execute(text(sql))
+                    #  Convert RowMapping to dict
+                    rows = [dict(row) for row in result.mappings().all()]
+                    return AIMessage(content=json.dumps(rows, indent=2, default=str))
+            except Exception as e:
+                logging.error(f"SQL execution error: {e}")
+                return AIMessage(content=f"Error executing SQL: {e}")
+
+
+        sql_chain = (
+            RunnablePassthrough()
+            | sql_prompt
+            | chat_model
+            | RunnableLambda(get_content_from_response)
+        )
+
+        retrieval_chain = sql_chain | RunnableLambda(execute_sql)
+
+        logging.info("Postgres chain created successfully")
+        return retrieval_chain, chat_history
+
+    except Exception as e:
+        logging.error(f"Error creating Postgres chain: {e}")
+        raise
+
+
+########################################
+# Agent Creator
+########################################
+async def create_renault_agent(
+    existing_file_db: Any = None,
+    gu_id: UUID4 = None,
+    persist_path: str = None,
+    chat_history: list = None,
+    chat_model: BaseChatOpenAI = utils.CHAT_MODEL,
+    not_answerable_prompt: ChatPromptTemplate = NOT_ANSWERABLE_PROMPT,
+    route_prompt: ChatPromptTemplate = ROUTE_PROMPT_RENAULT,
+) -> tuple[CompiledStateGraph, list]:
+    """
+    Creates Renault chatbot agent for routing between:
+    - vectorstore (file-specific) if available
+    - Postgres (aggregate queries)
+    - not_answerable (fallback)
+    """
+    try:
+        # Init chat history if empty
+        if chat_history is None:
+            chat_history = [
+                HumanMessage(content="Hi"),
+                AIMessage(content="Hi, how can I assist you?")
+            ]
+
+        # If we have a vectorstore, ensure it's loaded
+        if existing_file_db and gu_id and persist_path:
+            logging.info(f"Creating new vectorstore at {persist_path}")
+            local_faiss = existing_file_db.__class__(
+                embedding_function=utils.EMBEDDINGS,
+                persist_directory=persist_path
+            )
+            local_faiss.load()
+            local_faiss = await single_file_loader_embedding(
+                gu_id, existing_file_db, local_faiss
+            )
+            local_faiss.save_local()
+            existing_file_db = local_faiss
+        elif existing_file_db:
+            logging.info("Using provided vectorstore")
+
+        # --- Create chains ---
+        file_specific_chain = None
+        if existing_file_db:
+            logging.info("Creating file-specific retrieval chain")
+            file_specific_chain, chat_history = await create_specific_chain(
+                gu_id, existing_file_db, persist_path
+            )
+
+        postgres_chain, _ = create_postgres_chain(chat_history)
+        not_answerable_chain = not_answerable_prompt | chat_model
+
+        # Router model
+        structured_model_router = chat_model.with_structured_output(RouteQuery)
+        question_router = route_prompt | structured_model_router
+
+        # --- Retrieval functions ---
+        async def file_vector_retrieve(state: GraphState) -> GraphState:
+            logging.info("---RETRIEVE FILE VECTOR---")
+            question = state["question"]
+            chat_history = state["chat_history"]
+            chat_history, response = await get_response(
+                chain=file_specific_chain,
+                chat_history=chat_history,
+                question=question
+            )
+            return GraphState(chat_history=chat_history, response=response)
+
+        async def postgres_retrieve(state: GraphState) -> GraphState:
+            logging.info("---RETRIEVE FROM POSTGRES---")
+            question = state["question"]
+            chat_history = state["chat_history"]
+            chat_history, results = await get_response(
+                chain=postgres_chain,
+                chat_history=chat_history,
+                question=question
+            )
+            return GraphState(chat_history=chat_history, response=str(results))
+
+        async def not_answerable_generate(state: GraphState) -> GraphState:
+            logging.info("---NOT ANSWERABLE---")
+            question = state["question"]
+            chat_history = state["chat_history"]
+            chat_history, response = await get_response(
+                chain=not_answerable_chain,
+                chat_history=chat_history,
+                question=question
+            )
+            return GraphState(chat_history=chat_history, response=response)
+
+        # --- Router ---
+        async def route_question(state: GraphState) -> str:
+            try:
+                logging.info("---ROUTE QUESTION---")
+
+                ################# TEST ############
+                logging.info("---FORCE ROUTE TO POSTGRES FOR TESTING---")
+                return "postgres_retrieve"
+                ##################################
+
+                question = state["question"]
+
+                # Route based on whether file data is available
+                if existing_file_db:
+                    valid_routes = ["postgres_retrieve", "file_vector_retrieve"]
+                else:
+                    valid_routes = ["postgres_retrieve"]
+
+                source = await question_router.ainvoke({"question": question})
+
+                if source.datasource in valid_routes:
+                    return source.datasource
+                else:
+                    return "not_answerable"
+
+            except Exception as e:
+                logging.error(get_error_message_detail(e))
+                raise InternalError(f"Routing error: {e}")
+
+        # --- Build Graph ---
+        workflow = StateGraph(GraphState)
+
+        workflow.add_node("postgres_retrieve", postgres_retrieve)
+        workflow.add_node("not_answerable", not_answerable_generate)
+
+        if existing_file_db:
+            workflow.add_node("file_vector_retrieve", file_vector_retrieve)
+
+        # Conditional edges
+        edge_map = {
+            "postgres_retrieve": "postgres_retrieve",
+            "not_answerable": "not_answerable"
+        }
+        if existing_file_db:
+            edge_map["file_vector_retrieve"] = "file_vector_retrieve"
+
+        workflow.add_conditional_edges(START, route_question, edge_map)
+
+        # End edges
+        workflow.add_edge("postgres_retrieve", END)
+        workflow.add_edge("not_answerable", END)
+        if existing_file_db:
+            workflow.add_edge("file_vector_retrieve", END)
+
+        graph = workflow.compile()
+        return graph, chat_history
+
+    except Exception as e:
+        logging.error(get_error_message_detail(e, sys))
+        raise InternalError(f"Error creating Renault agent: {e}")
+
+
+
+########################################
+# Agent Response
+########################################
+# async def get_agent_response(
+#     graph: CompiledStateGraph,
+#     chat_history: list,
+#     query: str
+# ) -> tuple[CompiledStateGraph, str]:
+#     """Get agent response for a query."""
+#     try:
+#         result = await graph.ainvoke({
+#             "question": query,
+#             "chat_history": chat_history
+#         })
+#         return graph, result["response"]
+#     except Exception as e:
+#         logging.error(get_error_message_detail(e))
+#         raise InternalError(f"Error getting agent response: {e}")
+
+async def get_agent_response(
+    graph: CompiledStateGraph,
+    chat_history: list,
+    query: str
+) -> tuple[CompiledStateGraph, str]:
+    """Get agent response for a query."""
+    try:
+        result = await graph.ainvoke({
+            "question": query,
+            "chat_history": chat_history
+        })
+
+        response = result.get("response", "")
+        if not response:
+            logging.warning("Agent returned no response.")
+
+        return graph, response
+
+    except Exception as e:
+        logging.error(get_error_message_detail(e, sys))
+        raise InternalError(f"Error getting agent response: {e}")

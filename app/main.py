@@ -10,14 +10,11 @@ from fastapi import Request
 from starlette import status
 from app.info.db_info import init_db
 from app.routers import specific
-from app.routers import user_acess
-from app.routers import admin_access
-from app.routers import end_chat
 from app.components import heartbeat
 from app.middleware import ValidationExceptionMiddleware
 from app.logger import logging
 
- 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for startup and shutdown logic."""
@@ -41,8 +38,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(specific.router, prefix='/report')
-app.include_router(user_acess.router, prefix='/user_acess')
-app.include_router(end_chat.router)
 
 app.add_middleware(SessionMiddleware, secret_key="secret_key")
 app.add_middleware(ValidationExceptionMiddleware)

@@ -12,13 +12,6 @@ class QueryInfo(BaseModel):
     This model defines the structure for extracting query data from browser requests.
     """
     query: Annotated[str, StringConstraints(strip_whitespace=True)]
-    chatid: UUID4
-
-class QueryInfoGeneric(BaseModel):
-    """
-    This model defines the structure for extracting query data from browser requests specifically for generic chat.
-    """
-    query: Annotated[str, StringConstraints(strip_whitespace=True)]
     chatid: Union[UUID4, Literal[""]]
 
 # Pydantic model for response

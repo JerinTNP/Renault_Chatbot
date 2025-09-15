@@ -1,0 +1,7 @@
+[ 2025-09-15 11:35:32,031 ] - loader.py - <module> - Loading faiss.
+[ 2025-09-15 11:35:32,070 ] - loader.py - <module> - Successfully loaded faiss.
+[ 2025-09-15 11:35:32,077 ] - __init__.py - <module> - Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes.
+[ 2025-09-15 11:35:32,729 ] - vectorstore.py - load - Vectrostore loaded from vectorstore/renault successfully
+[ 2025-09-15 11:35:35,017 ] - sharepoint_info.py - <module> - SharePoint credentials loaded successfully
+[ 2025-09-15 11:35:37,283 ] - db_info.py - init_db - Database tables checked and created if not existing.
+[ 2025-09-15 11:35:37,434 ] - heartbeat.py - cleanup_old_chat_data - No old chats to clean up.

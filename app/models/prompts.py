@@ -135,11 +135,151 @@ ROUTE_PROMPT = ChatPromptTemplate.from_template(
 )
 
 
+
+
+
+
+
 NOT_ANSWERABLE_PROMPT = ChatPromptTemplate.from_template(
     """You are a helpful assistent.
     Answer to the following question based on your knowledge.
 
     Chat History: {chat_history}
     Question: {input}
+    """
+)
+
+
+
+
+
+
+
+# SQL Prompt
+SQL_PROMPT = ChatPromptTemplate.from_template("""
+You are an expert SQL assistant.  
+Your task is to convert the user's question into a valid SQL query that retrieves the correct answer from the PostgreSQL database.
+
+The table `users.ft_audits_concatanated` contains extracted KPIs from audit PDF reports with the following columns:
+- id (UUID, primary key)
+- filename (Name of the audit report file)
+- statistic (The KPI or metric name, e.g., 'Total Sales', 'Defect Rate', 'digital_score')
+- value (The corresponding value for the KPI, stored as text; some numeric values may include a '%' sign; it can also contain date values like '2024-05-01')
+- upload_date (Date the report was uploaded)
+- file_id (UUID linking to uploaded file)
+- chat_id (UUID linking to chat session)
+
+Guidelines for query generation:
+1. Only use this table (`users.ft_audits_concatanated`) to answer questions.
+2. If the question requires numeric aggregation (SUM, AVG, MIN, MAX, etc.):
+   - Remove any '%' characters from `value`.
+   - Filter to include only rows where `value` is numeric using:
+     value ~ '^[0-9]+(\\.[0-9]+)?%?$'
+   - Cast `value` to FLOAT before aggregation.
+   - Example:
+     SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) AS avg_val
+     FROM users.ft_audits_concatanated
+     WHERE statistic = 'digital_score'
+       AND value ~ '^[0-9]+(\\.[0-9]+)?%?$';
+3. If the question is about dates, allow `value` to be cast to DATE without numeric filtering.
+4. If the user asks about a specific file, filter by `filename` (case-insensitive).
+5. Always return only the columns needed for the answer.
+6. Do NOT include explanations — return only the SQL query.
+
+User question: {input}
+# """)
+
+
+##############fixing static identification issue##############
+# SQL_PROMPT = ChatPromptTemplate.from_template("""
+# You are an expert SQL assistant.
+# Your task is to convert the user's question into a valid SQL query for a PostgreSQL database.
+
+# **Table Schema:**
+# The query will be run on the `users.ft_audits_concatanated` table, which contains KPIs from audit reports.
+# - `statistic` (The KPI name, e.g., 'total_sales', 'defect_rate', 'digital_score')
+# - `value` (The KPI's value, stored as text. Can be numeric, contain '%', or be a date)
+# - `filename` (Name of the source file)
+# - `upload_date` (Date of upload)
+
+# ---
+# **KPI Mapping:**
+# The user's phrasing for a KPI may not exactly match the `statistic` column. You must map their question to the correct `statistic` value. The matching should be case-insensitive.
+
+# Here are some of the possible values in the `statistic` column:
+# - `new_vehicle_activity`
+# - `digital_score`
+# - `total_sales`
+# - `used_vehicle_stock`
+# - `customer_satisfaction_rate`
+
+# ---
+# **Query Generation Rules:**
+# 1.  **Use ONLY the `users.ft_audits_concatanated` table.**
+# 2.  **For numeric aggregations (SUM, AVG, etc.):**
+#     - First, filter for rows where `value` is likely numeric using the regex: `value ~ '^[0-9]+(\\.[0-9]+)?%?$'`
+#     - Before aggregating, remove any '%' characters and cast the `value` to FLOAT.
+# 3.  **Do not filter out non-numeric values for non-aggregation questions** (e.g., "what was the last value for...").
+# 4.  **Return ONLY the final SQL query.** Do not include any explanations.
+
+# ---
+# **Examples:**
+
+# **User Question:** what is the average of new vehicle activity?
+# **SQL Query:**
+# SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) FROM users.ft_audits_concatanated WHERE statistic = 'new_vehicle_activity' AND value ~ '^[0-9]+(\\.[0-9]+)?%?$';
+
+# **User Question:** what was the total sales for the report named 'Q1_sales.pdf'?
+# **SQL Query:**
+# SELECT value FROM users.ft_audits_concatanated WHERE statistic = 'total_sales' AND filename ILIKE 'Q1_sales.pdf';
+
+# ---
+# **User question:** {input}
+# """)
+
+
+
+
+ROUTE_PROMPT_RENAULT = ChatPromptTemplate.from_template(
+    """
+    You are an intelligent router for a Renault Dealer Quality Assessment chatbot.
+    Your job is to decide which data source to use for answering the user's question.
+
+    You have 3 possible tools:
+
+    1. file_vector_retrieve:
+       - Use this ONLY when the user is asking about specific textual details from the uploaded audit PDF.
+       - This includes summarization, explanations of text, descriptions, or anything that can be directly looked up
+         word-for-word in the file.
+       - Example:
+           "Summarize this audit report."
+           "What does the customer journey section say?"
+           "Tell me the steps mentioned in the order management process."
+
+    2. postgres_retrieve:
+       - Use this when the user is asking about aggregated statistics stored in the PostgreSQL database
+         (`ft_audits_concatanated` table).
+       - This is for numerical or categorical data that can be queried via SQL.
+       - Examples:
+           "What is the average global score for this country?"
+           "List all dealers with a product presentation score below 80%"
+           "Show average customer journey score across all dealers"
+           "Which dealer has the highest NV Renault Sales?"
+
+    3. not_answerable:
+       - Use this if the question is unrelated to both the file content and the stored database metrics.
+       - Examples:
+           "What's the weather today?"
+           "Who is the CEO of Renault?"
+           "Tell me a joke."
+
+    IMPORTANT:
+    - If the question clearly asks for a score, percentage, count, average, or dealer comparison → choose postgres_retrieve.
+    - If the question refers to "this document", "the file", or asks for explanation of audit sections → choose file_vector_retrieve.
+    - If none of the above applies → choose not_answerable.
+
+    Question: {question}
+
+    Respond with one of these EXACT values: "postgres_retrieve", "file_vector_retrieve", or "not_answerable".
     """
 )

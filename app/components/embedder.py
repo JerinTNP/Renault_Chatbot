@@ -288,7 +288,6 @@ class DATA_LOADER_SP():
             vectorstore: FAISS_DB,
             source: str,
             gu_id: str = None,
-            user_id:str = None,
             fileinfo: db_info.FileInfo = None
             ) -> None:
         """
@@ -301,7 +300,6 @@ class DATA_LOADER_SP():
             vectorstore (FAISS_DB): An instance of a FAISS vectorstore class.
             source (str): A string denoting the source system or context for the document.
             gu_id (str, optional): A unique identifier for the document. If not provided, one is generated.
-            user_id (str, optional): The user ID associated with the file upload.
 
         Returns:
             None
@@ -325,8 +323,7 @@ class DATA_LOADER_SP():
                             upload_date = modified_date,
                             gu_id = gu_id,
                             embed_done = False,
-                            source = source,
-                            user_id = user_id
+                            source = source
                         )
                     
                         db.add(fileinfo)
@@ -406,8 +403,7 @@ class DATA_LOADER_SP():
             sp_folder_relative_path: str,
             vectorstore: FAISS_DB,
             source: str,
-            gu_id: str = None,
-            user_id: str = None):
+            gu_id: str = None):
         """
         Asynchronously processes and adds up to 10 SharePoint files from a specified folder into a vectorstore.
 
@@ -417,7 +413,6 @@ class DATA_LOADER_SP():
             vectorstore (FAISS_DB): An instance of a FAISS vectorstore class.
             source (str): Identifier for the origin or context of the files.
             gu_id (str, optional): Global unique identifier.
-            user_id (str, optional): ID of the user who initiated the upload or process.
 
         Returns:
             None
@@ -464,7 +459,6 @@ class DATA_LOADER_SP():
                                                     vectorstore=vectorstore,
                                                     source=source,
                                                     gu_id=gu_id,
-                                                    user_id = user_id,
                                                     fileinfo=file_info
                                                     )
 

@@ -1,0 +1,20 @@
+[ 2025-09-15 11:36:08,864 ] - loader.py - <module> - Loading faiss.
+[ 2025-09-15 11:36:08,904 ] - loader.py - <module> - Successfully loaded faiss.
+[ 2025-09-15 11:36:08,916 ] - __init__.py - <module> - Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes.
+[ 2025-09-15 11:36:09,498 ] - vectorstore.py - load - Vectrostore loaded from vectorstore/renault successfully
+[ 2025-09-15 11:36:12,954 ] - sharepoint_info.py - <module> - SharePoint credentials loaded successfully
+[ 2025-09-15 11:36:14,343 ] - db_info.py - init_db - Database tables checked and created if not existing.
+[ 2025-09-15 11:36:14,379 ] - heartbeat.py - cleanup_old_chat_data - No old chats to clean up.
+[ 2025-09-15 12:51:59,779 ] - specific.py - upload_file - Starting file upload process for: Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf
+[ 2025-09-15 12:51:59,822 ] - file_handler.py - get_embeded_db - File exists in sharepoint: https://tnpconsulting.sharepoint.com/sites/DataScienceIndia/Documents partages/WIN/Renault/Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf
+[ 2025-09-15 12:51:59,823 ] - file_handler.py - get_embeded_db - The given file is found in vectorstore:vectorstore/renault
+[ 2025-09-15 12:51:59,824 ] - specific.py - upload_file - File 'Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf' found. Creating new chat session for existing document.
+[ 2025-09-15 12:52:04,703 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenai.openai.azure.com/openai/deployments/TnpBoBEmbedding/embeddings?api-version=2023-05-15 "HTTP/1.1 200 OK"
+[ 2025-09-15 12:52:04,710 ] - vectorstore.py - load - Vectrostore created successfully
+[ 2025-09-15 12:52:04,713 ] - vectorstore.py - load - Vectrostore saved to vectorstore/renault/fd10d452-137c-492e-bebf-874b22890ead successfully
+[ 2025-09-15 12:52:04,713 ] - action_handler.py - create_specific_chain - New vectorstore created at : vectorstore/renault/fd10d452-137c-492e-bebf-874b22890ead
+[ 2025-09-15 12:52:04,714 ] - action_handler.py - single_file_loader_embedding - Files copying to new vectorstore
+[ 2025-09-15 12:52:04,739 ] - action_handler.py - single_file_loader_embedding - Files copied to the new vectorstore : {'https://tnpconsulting.sharepoint.com/sites/DataScienceIndia/Documents partages/WIN/Renault/Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf'}
+[ 2025-09-15 12:52:04,773 ] - action_handler.py - create_chain - Creating chain
+[ 2025-09-15 12:52:04,784 ] - action_handler.py - create_chain - Chain created with vectorstore : vectorstore/renault/fd10d452-137c-492e-bebf-874b22890ead
+[ 2025-09-15 12:52:05,123 ] - specific.py - generate_tables - file was already processed: 240ae4af-d7e6-4561-bf0c-b1bd46b6ca02

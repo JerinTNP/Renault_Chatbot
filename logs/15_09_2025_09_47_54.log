@@ -1,0 +1,188 @@
+[ 2025-09-15 09:47:57,649 ] - loader.py - <module> - Loading faiss.
+[ 2025-09-15 09:47:57,742 ] - loader.py - <module> - Successfully loaded faiss.
+[ 2025-09-15 09:47:57,755 ] - __init__.py - <module> - Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes.
+[ 2025-09-15 09:47:58,627 ] - vectorstore.py - load - Vectrostore loaded from vectorstore/renault successfully
+[ 2025-09-15 09:48:07,636 ] - sharepoint_info.py - <module> - SharePoint credentials loaded successfully
+[ 2025-09-15 09:48:10,807 ] - db_info.py - init_db - Database tables checked and created if not existing.
+[ 2025-09-15 09:48:10,845 ] - heartbeat.py - cleanup_old_chat_data - No old chats to clean up.
+[ 2025-09-15 09:49:45,053 ] - specific.py - specific_chat - Chat not found: a61b2eb4-8f26-4b53-8447-e9973e9051ab, Creating new one
+[ 2025-09-15 09:49:45,151 ] - specific.py - specific_chat - new chat record for a61b2eb4-8f26-4b53-8447-e9973e9051ab
+[ 2025-09-15 09:49:45,152 ] - specific.py - specific_chat - Reconstructing session for chatid a61b2eb4-8f26-4b53-8447-e9973e9051ab
+[ 2025-09-15 09:49:45,153 ] - specific.py - specific_chat - No vectorstore found. Proceeding without document retrieval.
+[ 2025-09-15 09:49:45,153 ] - action_handler.py - create_postgres_chain - Creating Postgres chain
+[ 2025-09-15 09:49:45,155 ] - action_handler.py - create_postgres_chain - Postgres chain created successfully
+[ 2025-09-15 09:49:45,186 ] - action_handler.py - route_question - ---ROUTE QUESTION---
+[ 2025-09-15 09:49:45,190 ] - action_handler.py - route_question - ---FORCE ROUTE TO POSTGRES FOR TESTING---
+[ 2025-09-15 09:49:45,195 ] - action_handler.py - postgres_retrieve - ---RETRIEVE FROM POSTGRES---
+[ 2025-09-15 09:49:48,030 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 09:49:48,097 ] - action_handler.py - execute_sql - Executing SQL: SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) FROM users.ft_audits_concatanated WHERE statistic = 'new_vehicle_activity' AND value ~ '^[0-9]+(\.[0-9]+)?%?$';
+[ 2025-09-15 09:49:48,220 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 09:49:48,226 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 09:49:58,590 ] - action_handler.py - route_question - ---ROUTE QUESTION---
+[ 2025-09-15 09:49:58,593 ] - action_handler.py - route_question - ---FORCE ROUTE TO POSTGRES FOR TESTING---
+[ 2025-09-15 09:49:58,595 ] - action_handler.py - postgres_retrieve - ---RETRIEVE FROM POSTGRES---
+[ 2025-09-15 09:50:00,479 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 09:50:00,524 ] - action_handler.py - execute_sql - Executing SQL: SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) FROM users.ft_audits_concatanated WHERE statistic = 'new_vehicle_activity' AND value ~ '^[0-9]+(\.[0-9]+)?%?$';
+[ 2025-09-15 09:50:00,608 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 09:50:00,609 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 09:50:14,722 ] - action_handler.py - route_question - ---ROUTE QUESTION---
+[ 2025-09-15 09:50:14,722 ] - action_handler.py - route_question - ---FORCE ROUTE TO POSTGRES FOR TESTING---
+[ 2025-09-15 09:50:14,726 ] - action_handler.py - postgres_retrieve - ---RETRIEVE FROM POSTGRES---
+[ 2025-09-15 09:50:16,800 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 09:50:16,872 ] - action_handler.py - execute_sql - Executing SQL: SELECT SUM(CAST(REPLACE(value, '%', '') AS FLOAT)) FROM users.ft_audits_concatanated WHERE statistic = 'new_vehicle_activity' AND value ~ '^[0-9]+(\.[0-9]+)?%?$';
+[ 2025-09-15 09:50:16,894 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 09:50:16,895 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 10:13:26,698 ] - specific.py - upload_file - Starting file upload process for: Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf
+[ 2025-09-15 10:13:26,729 ] - file_handler.py - get_embeded_db - File exists in sharepoint: https://tnpconsulting.sharepoint.com/sites/DataScienceIndia/Documents partages/WIN/Renault/Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf
+[ 2025-09-15 10:13:26,731 ] - file_handler.py - get_embeded_db - The given file is found in vectorstore:vectorstore/renault
+[ 2025-09-15 10:13:26,732 ] - specific.py - upload_file - File 'Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf' found. Creating new chat session for existing document.
+[ 2025-09-15 10:13:32,779 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenai.openai.azure.com/openai/deployments/TnpBoBEmbedding/embeddings?api-version=2023-05-15 "HTTP/1.1 200 OK"
+[ 2025-09-15 10:13:32,799 ] - vectorstore.py - load - Vectrostore created successfully
+[ 2025-09-15 10:13:32,807 ] - vectorstore.py - load - Vectrostore saved to vectorstore/renault/137a9353-c918-4e19-9db5-bed70d448cd3 successfully
+[ 2025-09-15 10:13:32,808 ] - action_handler.py - create_specific_chain - New vectorstore created at : vectorstore/renault/137a9353-c918-4e19-9db5-bed70d448cd3
+[ 2025-09-15 10:13:32,809 ] - action_handler.py - single_file_loader_embedding - Files copying to new vectorstore
+[ 2025-09-15 10:13:32,864 ] - action_handler.py - single_file_loader_embedding - Files copied to the new vectorstore : {'https://tnpconsulting.sharepoint.com/sites/DataScienceIndia/Documents partages/WIN/Renault/Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf'}
+[ 2025-09-15 10:13:32,881 ] - action_handler.py - create_chain - Creating chain
+[ 2025-09-15 10:13:32,901 ] - action_handler.py - create_chain - Chain created with vectorstore : vectorstore/renault/137a9353-c918-4e19-9db5-bed70d448cd3
+[ 2025-09-15 10:13:33,033 ] - specific.py - generate_tables - file was already processed: 240ae4af-d7e6-4561-bf0c-b1bd46b6ca02
+[ 2025-09-15 10:13:47,332 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 10:13:48,259 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenai.openai.azure.com/openai/deployments/TnpBoBEmbedding/embeddings?api-version=2023-05-15 "HTTP/1.1 200 OK"
+[ 2025-09-15 10:13:48,286 ] - action_handler.py - combine_docs - Combining retrieved chunks.
+[ 2025-09-15 10:13:49,715 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 10:13:49,726 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 10:13:49,728 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 10:14:11,861 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 10:14:14,012 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenai.openai.azure.com/openai/deployments/TnpBoBEmbedding/embeddings?api-version=2023-05-15 "HTTP/1.1 200 OK"
+[ 2025-09-15 10:14:14,027 ] - action_handler.py - combine_docs - Combining retrieved chunks.
+[ 2025-09-15 10:14:15,716 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 10:14:15,725 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 10:14:15,727 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 10:14:48,346 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 10:14:49,315 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenai.openai.azure.com/openai/deployments/TnpBoBEmbedding/embeddings?api-version=2023-05-15 "HTTP/1.1 200 OK"
+[ 2025-09-15 10:14:49,328 ] - action_handler.py - combine_docs - Combining retrieved chunks.
+[ 2025-09-15 10:14:50,623 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 10:14:50,632 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 10:14:50,632 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 11:11:04,664 ] - specific.py - upload_file - Starting file upload process for: Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf
+[ 2025-09-15 11:11:04,686 ] - file_handler.py - get_embeded_db - File exists in sharepoint: https://tnpconsulting.sharepoint.com/sites/DataScienceIndia/Documents partages/WIN/Renault/Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf
+[ 2025-09-15 11:11:04,687 ] - file_handler.py - get_embeded_db - The given file is found in vectorstore:vectorstore/renault
+[ 2025-09-15 11:11:04,688 ] - specific.py - upload_file - File 'Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf' found. Creating new chat session for existing document.
+[ 2025-09-15 11:11:07,038 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenai.openai.azure.com/openai/deployments/TnpBoBEmbedding/embeddings?api-version=2023-05-15 "HTTP/1.1 200 OK"
+[ 2025-09-15 11:11:07,044 ] - vectorstore.py - load - Vectrostore created successfully
+[ 2025-09-15 11:11:07,047 ] - vectorstore.py - load - Vectrostore saved to vectorstore/renault/3d45f3d6-b2ca-402c-a1f4-3fd1c774ff78 successfully
+[ 2025-09-15 11:11:07,048 ] - action_handler.py - create_specific_chain - New vectorstore created at : vectorstore/renault/3d45f3d6-b2ca-402c-a1f4-3fd1c774ff78
+[ 2025-09-15 11:11:07,049 ] - action_handler.py - single_file_loader_embedding - Files copying to new vectorstore
+[ 2025-09-15 11:11:07,064 ] - action_handler.py - single_file_loader_embedding - Files copied to the new vectorstore : {'https://tnpconsulting.sharepoint.com/sites/DataScienceIndia/Documents partages/WIN/Renault/Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf'}
+[ 2025-09-15 11:11:07,080 ] - action_handler.py - create_chain - Creating chain
+[ 2025-09-15 11:11:07,083 ] - action_handler.py - create_chain - Chain created with vectorstore : vectorstore/renault/3d45f3d6-b2ca-402c-a1f4-3fd1c774ff78
+[ 2025-09-15 11:11:07,236 ] - specific.py - generate_tables - file was already processed: 240ae4af-d7e6-4561-bf0c-b1bd46b6ca02
+[ 2025-09-15 11:11:40,302 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:11:42,770 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenai.openai.azure.com/openai/deployments/TnpBoBEmbedding/embeddings?api-version=2023-05-15 "HTTP/1.1 200 OK"
+[ 2025-09-15 11:11:42,781 ] - action_handler.py - combine_docs - Combining retrieved chunks.
+[ 2025-09-15 11:11:44,224 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:11:44,233 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 11:11:44,234 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 11:12:30,108 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:12:32,383 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenai.openai.azure.com/openai/deployments/TnpBoBEmbedding/embeddings?api-version=2023-05-15 "HTTP/1.1 200 OK"
+[ 2025-09-15 11:12:32,391 ] - action_handler.py - combine_docs - Combining retrieved chunks.
+[ 2025-09-15 11:12:34,081 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:12:34,091 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 11:12:34,092 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 11:13:04,597 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:13:05,693 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenai.openai.azure.com/openai/deployments/TnpBoBEmbedding/embeddings?api-version=2023-05-15 "HTTP/1.1 200 OK"
+[ 2025-09-15 11:13:05,702 ] - action_handler.py - combine_docs - Combining retrieved chunks.
+[ 2025-09-15 11:13:07,718 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:13:07,725 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 11:13:07,725 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 11:16:10,493 ] - specific.py - specific_chat - Chat not found: fc6d74fa-c88f-4b0c-9cfb-00496377f94e, Creating new one
+[ 2025-09-15 11:16:10,572 ] - specific.py - specific_chat - new chat record for fc6d74fa-c88f-4b0c-9cfb-00496377f94e
+[ 2025-09-15 11:16:10,573 ] - specific.py - specific_chat - Reconstructing session for chatid fc6d74fa-c88f-4b0c-9cfb-00496377f94e
+[ 2025-09-15 11:16:10,573 ] - specific.py - specific_chat - No vectorstore found. Proceeding without document retrieval.
+[ 2025-09-15 11:16:10,573 ] - action_handler.py - create_postgres_chain - Creating Postgres chain
+[ 2025-09-15 11:16:10,575 ] - action_handler.py - create_postgres_chain - Postgres chain created successfully
+[ 2025-09-15 11:16:10,602 ] - action_handler.py - route_question - ---ROUTE QUESTION---
+[ 2025-09-15 11:16:10,602 ] - action_handler.py - route_question - ---FORCE ROUTE TO POSTGRES FOR TESTING---
+[ 2025-09-15 11:16:10,605 ] - action_handler.py - postgres_retrieve - ---RETRIEVE FROM POSTGRES---
+[ 2025-09-15 11:16:14,787 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:16:14,797 ] - action_handler.py - execute_sql - Executing SQL: SELECT filename FROM users.ft_audits_concatanated WHERE statistic = 'total_sales' ORDER BY value;
+[ 2025-09-15 11:16:14,830 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 11:16:14,831 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 11:17:25,749 ] - specific.py - specific_chat - Chat not found: a226ccf7-1676-4937-a4cf-72d4d5f72905, Creating new one
+[ 2025-09-15 11:17:25,787 ] - specific.py - specific_chat - new chat record for a226ccf7-1676-4937-a4cf-72d4d5f72905
+[ 2025-09-15 11:17:25,788 ] - specific.py - specific_chat - Reconstructing session for chatid a226ccf7-1676-4937-a4cf-72d4d5f72905
+[ 2025-09-15 11:17:25,789 ] - specific.py - specific_chat - No vectorstore found. Proceeding without document retrieval.
+[ 2025-09-15 11:17:25,790 ] - action_handler.py - create_postgres_chain - Creating Postgres chain
+[ 2025-09-15 11:17:25,791 ] - action_handler.py - create_postgres_chain - Postgres chain created successfully
+[ 2025-09-15 11:17:25,799 ] - action_handler.py - route_question - ---ROUTE QUESTION---
+[ 2025-09-15 11:17:25,800 ] - action_handler.py - route_question - ---FORCE ROUTE TO POSTGRES FOR TESTING---
+[ 2025-09-15 11:17:25,802 ] - action_handler.py - postgres_retrieve - ---RETRIEVE FROM POSTGRES---
+[ 2025-09-15 11:17:29,315 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:17:29,329 ] - action_handler.py - execute_sql - Executing SQL: SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) FROM users.ft_audits_concatanated WHERE statistic = 'customer_satisfaction_rate' AND value ~ '^[0-9]+(\.[0-9]+)?%?$';
+[ 2025-09-15 11:17:29,354 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 11:17:29,354 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 11:17:42,592 ] - action_handler.py - route_question - ---ROUTE QUESTION---
+[ 2025-09-15 11:17:42,597 ] - action_handler.py - route_question - ---FORCE ROUTE TO POSTGRES FOR TESTING---
+[ 2025-09-15 11:17:42,598 ] - action_handler.py - postgres_retrieve - ---RETRIEVE FROM POSTGRES---
+[ 2025-09-15 11:17:45,457 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:17:45,470 ] - action_handler.py - execute_sql - Executing SQL: SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) FROM users.ft_audits_concatanated WHERE statistic = 'customer_satisfaction_rate' AND value ~ '^[0-9]+(\.[0-9]+)?%?$';
+[ 2025-09-15 11:17:45,523 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 11:17:45,524 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 11:18:05,483 ] - action_handler.py - route_question - ---ROUTE QUESTION---
+[ 2025-09-15 11:18:05,484 ] - action_handler.py - route_question - ---FORCE ROUTE TO POSTGRES FOR TESTING---
+[ 2025-09-15 11:18:05,485 ] - action_handler.py - postgres_retrieve - ---RETRIEVE FROM POSTGRES---
+[ 2025-09-15 11:18:07,789 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:18:07,797 ] - action_handler.py - execute_sql - Executing SQL: SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) FROM users.ft_audits_concatanated WHERE statistic = 'digital_score' AND value ~ '^[0-9]+(\.[0-9]+)?%?$';
+[ 2025-09-15 11:18:07,859 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 11:18:07,860 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 11:18:21,610 ] - action_handler.py - route_question - ---ROUTE QUESTION---
+[ 2025-09-15 11:18:21,613 ] - action_handler.py - route_question - ---FORCE ROUTE TO POSTGRES FOR TESTING---
+[ 2025-09-15 11:18:21,613 ] - action_handler.py - postgres_retrieve - ---RETRIEVE FROM POSTGRES---
+[ 2025-09-15 11:18:25,817 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:18:25,830 ] - action_handler.py - execute_sql - Executing SQL: SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) FROM users.ft_audits_concatanated WHERE statistic = 'digital_score' AND value ~ '^[0-9]+(\.[0-9]+)?%?$';
+[ 2025-09-15 11:18:25,878 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 11:18:25,878 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 11:18:39,057 ] - specific.py - specific_chat - Chat not found: fec8577b-3a0b-40ec-b75a-3418cab8bd15, Creating new one
+[ 2025-09-15 11:18:39,108 ] - specific.py - specific_chat - new chat record for fec8577b-3a0b-40ec-b75a-3418cab8bd15
+[ 2025-09-15 11:18:39,110 ] - specific.py - specific_chat - Reconstructing session for chatid fec8577b-3a0b-40ec-b75a-3418cab8bd15
+[ 2025-09-15 11:18:39,111 ] - specific.py - specific_chat - No vectorstore found. Proceeding without document retrieval.
+[ 2025-09-15 11:18:39,111 ] - action_handler.py - create_postgres_chain - Creating Postgres chain
+[ 2025-09-15 11:18:39,113 ] - action_handler.py - create_postgres_chain - Postgres chain created successfully
+[ 2025-09-15 11:18:39,121 ] - action_handler.py - route_question - ---ROUTE QUESTION---
+[ 2025-09-15 11:18:39,123 ] - action_handler.py - route_question - ---FORCE ROUTE TO POSTGRES FOR TESTING---
+[ 2025-09-15 11:18:39,124 ] - action_handler.py - postgres_retrieve - ---RETRIEVE FROM POSTGRES---
+[ 2025-09-15 11:18:42,655 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:18:42,676 ] - action_handler.py - execute_sql - Executing SQL: SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) FROM users.ft_audits_concatanated WHERE statistic = 'digital_score' AND value ~ '^[0-9]+(\.[0-9]+)?%?$';
+[ 2025-09-15 11:18:42,708 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 11:18:42,709 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 11:20:33,196 ] - specific.py - upload_file - Starting file upload process for: Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf
+[ 2025-09-15 11:20:33,215 ] - file_handler.py - get_embeded_db - File exists in sharepoint: https://tnpconsulting.sharepoint.com/sites/DataScienceIndia/Documents partages/WIN/Renault/Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf
+[ 2025-09-15 11:20:33,215 ] - file_handler.py - get_embeded_db - The given file is found in vectorstore:vectorstore/renault
+[ 2025-09-15 11:20:33,215 ] - specific.py - upload_file - File 'Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf' found. Creating new chat session for existing document.
+[ 2025-09-15 11:20:36,327 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenai.openai.azure.com/openai/deployments/TnpBoBEmbedding/embeddings?api-version=2023-05-15 "HTTP/1.1 200 OK"
+[ 2025-09-15 11:20:36,330 ] - vectorstore.py - load - Vectrostore created successfully
+[ 2025-09-15 11:20:36,334 ] - vectorstore.py - load - Vectrostore saved to vectorstore/renault/58cac8cc-1157-4f39-8240-250cc61ce36b successfully
+[ 2025-09-15 11:20:36,334 ] - action_handler.py - create_specific_chain - New vectorstore created at : vectorstore/renault/58cac8cc-1157-4f39-8240-250cc61ce36b
+[ 2025-09-15 11:20:36,334 ] - action_handler.py - single_file_loader_embedding - Files copying to new vectorstore
+[ 2025-09-15 11:20:36,346 ] - action_handler.py - single_file_loader_embedding - Files copied to the new vectorstore : {'https://tnpconsulting.sharepoint.com/sites/DataScienceIndia/Documents partages/WIN/Renault/Audit DQA_05600111_EN_11_07_2024_RENAULT.pdf'}
+[ 2025-09-15 11:20:36,359 ] - action_handler.py - create_chain - Creating chain
+[ 2025-09-15 11:20:36,362 ] - action_handler.py - create_chain - Chain created with vectorstore : vectorstore/renault/58cac8cc-1157-4f39-8240-250cc61ce36b
+[ 2025-09-15 11:20:36,521 ] - specific.py - generate_tables - file was already processed: 240ae4af-d7e6-4561-bf0c-b1bd46b6ca02
+[ 2025-09-15 11:21:01,372 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:21:02,613 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenai.openai.azure.com/openai/deployments/TnpBoBEmbedding/embeddings?api-version=2023-05-15 "HTTP/1.1 200 OK"
+[ 2025-09-15 11:21:02,628 ] - action_handler.py - combine_docs - Combining retrieved chunks.
+[ 2025-09-15 11:21:03,970 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:21:03,977 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 11:21:03,978 ] - action_handler.py - get_response - Response added to chat history.
+[ 2025-09-15 11:22:50,389 ] - specific.py - specific_chat - Chat not found: 9d17f9a4-4eda-4dee-af55-81f6b00baee9, Creating new one
+[ 2025-09-15 11:22:50,766 ] - specific.py - specific_chat - new chat record for 9d17f9a4-4eda-4dee-af55-81f6b00baee9
+[ 2025-09-15 11:22:50,768 ] - specific.py - specific_chat - Reconstructing session for chatid 9d17f9a4-4eda-4dee-af55-81f6b00baee9
+[ 2025-09-15 11:22:50,773 ] - specific.py - specific_chat - No vectorstore found. Proceeding without document retrieval.
+[ 2025-09-15 11:22:50,773 ] - action_handler.py - create_postgres_chain - Creating Postgres chain
+[ 2025-09-15 11:22:50,788 ] - action_handler.py - create_postgres_chain - Postgres chain created successfully
+[ 2025-09-15 11:22:50,836 ] - action_handler.py - route_question - ---ROUTE QUESTION---
+[ 2025-09-15 11:22:50,843 ] - action_handler.py - route_question - ---FORCE ROUTE TO POSTGRES FOR TESTING---
+[ 2025-09-15 11:22:50,854 ] - action_handler.py - postgres_retrieve - ---RETRIEVE FROM POSTGRES---
+[ 2025-09-15 11:22:53,117 ] - _client.py - _send_single_request - HTTP Request: POST https://bobazureopenaiv2.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview "HTTP/1.1 200 OK"
+[ 2025-09-15 11:22:53,130 ] - action_handler.py - execute_sql - Executing SQL: SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) FROM users.ft_audits_concatanated WHERE statistic = 'customer_satisfaction_rate' AND value ~ '^[0-9]+(\.[0-9]+)?%?$';
+[ 2025-09-15 11:22:53,270 ] - action_handler.py - get_response - Response generated successfully
+[ 2025-09-15 11:22:53,272 ] - action_handler.py - get_response - Response added to chat history.
