@@ -58,7 +58,6 @@ def start_automation():
             dealers_answers_temp['filename'] = report_name
             dealers_answers = pd.concat([dealers_answers,dealers_answers_temp], ignore_index = True)
 
-
         # fh.write_output(dealer_statistics, dealers_answers, report_timeline)
         return dealer_statistics  
 

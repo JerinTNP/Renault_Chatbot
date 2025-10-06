@@ -1,3 +1,0 @@
-[ 2025-09-15 11:35:26,582 ] - loader.py - <module> - Loading faiss.
-[ 2025-09-15 11:35:26,711 ] - loader.py - <module> - Successfully loaded faiss.
-[ 2025-09-15 11:35:26,721 ] - __init__.py - <module> - Failed to load GPU Faiss: name 'GpuIndexIVFFlat' is not defined. Will not load constructor refs for GPU indexes.
