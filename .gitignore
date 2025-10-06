@@ -5,4 +5,4 @@ env/
 venv/
 vectorstore/
 app/components/generate_tables/data
-logs/
+/logs/
