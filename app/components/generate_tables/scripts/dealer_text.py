@@ -8,6 +8,7 @@ import pandas as pd
 
 from app.components.generate_tables.scripts import settings as ss
 
+
 def is_question(line, questions_partial):
     """
     Checks if the question is available in questions list.
@@ -24,7 +25,8 @@ def is_question(line, questions_partial):
     return False
 
 
-def detect_questions_detailed(dealer_qa, questions_partial, multi_line = ss.MULTI_LINE_QUESTION_NUMBERS):
+
+def detect_questions_detailed(dealer_qa, questions_partial, config):
     """
     Detects questions from the report
     Args:
@@ -38,6 +40,7 @@ def detect_questions_detailed(dealer_qa, questions_partial, multi_line = ss.MULT
         question_indices (List): list of indices of questions
         multi_line_indices (Dict): dictionary of indicides of multi-line questions along with additional line count
     """
+    multi_line = config["MULTI_LINE_QUESTION_NUMBERS"]
     questions = [] # to save all questions
     multi_line_indices = {} # to save index of multi-line question and number of additional lines
     question_indices = [] # to save index of all questions
@@ -155,7 +158,7 @@ def detect_answers(dealer_qa, answer_indices):
     return answers, statuses, pre_comments, post_comments
 
 
-def detect_quality_assessment_results(dealer_qa, questions_partial):
+def detect_quality_assessment_results(dealer_qa, questions_partial, config):
     """
     Fetch quality assessment data from report.
 
@@ -166,7 +169,8 @@ def detect_quality_assessment_results(dealer_qa, questions_partial):
     Returns:
         qa_results (DataFrame): quality assessment results
     """
-    questions, question_numbers, question_indices, multi_line_indices = detect_questions_detailed(dealer_qa, questions_partial)
+    temp_value = detect_questions_detailed(dealer_qa, questions_partial,config)
+    questions, question_numbers, question_indices, multi_line_indices = temp_value    
     answer_indices = get_answer_idices(question_indices, multi_line_indices)
     answers, status, pre_comment, post_comment = detect_answers(dealer_qa, answer_indices)
     

@@ -156,41 +156,41 @@ NOT_ANSWERABLE_PROMPT = ChatPromptTemplate.from_template(
 
 
 # SQL Prompt
-SQL_PROMPT = ChatPromptTemplate.from_template("""
-You are an expert SQL assistant.  
-Your task is to convert the user's question into a valid SQL query that retrieves the correct answer from the PostgreSQL database.
+# SQL_PROMPT = ChatPromptTemplate.from_template("""
+# You are an expert SQL assistant.  
+# Your task is to convert the user's question into a valid SQL query that retrieves the correct answer from the PostgreSQL database.
 
-The table `users.ft_audits_concatanated` contains extracted KPIs from audit PDF reports with the following columns:
-- id (UUID, primary key)
-- filename (Name of the audit report file)
-- statistic (The KPI or metric name, e.g., 'Total Sales', 'Defect Rate', 'digital_score')
-- value (The corresponding value for the KPI, stored as text; some numeric values may include a '%' sign; it can also contain date values like '2024-05-01')
-- upload_date (Date the report was uploaded)
-- file_id (UUID linking to uploaded file)
-- chat_id (UUID linking to chat session)
+# The table `users.ft_audits_concatanated` contains extracted KPIs from audit PDF reports with the following columns:
+# - id (UUID, primary key)
+# - filename (Name of the audit report file)
+# - statistic (The KPI or metric name, e.g., 'Total Sales', 'Defect Rate', 'digital_score')
+# - value (The corresponding value for the KPI, stored as text; some numeric values may include a '%' sign; it can also contain date values like '2024-05-01')
+# - upload_date (Date the report was uploaded)
+# - file_id (UUID linking to uploaded file)
+# - chat_id (UUID linking to chat session)
 
-Guidelines for query generation:
-1. Only use this table (`users.ft_audits_concatanated`) to answer questions.
-2. If the question requires numeric aggregation (SUM, AVG, MIN, MAX, etc.):
-   - Remove any '%' characters from `value`.
-   - Filter to include only rows where `value` is numeric using:
-     value ~ '^[0-9]+(\\.[0-9]+)?%?$'
-   - Cast `value` to FLOAT before aggregation.
-   - Example:
-     SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) AS avg_val
-     FROM users.ft_audits_concatanated
-     WHERE statistic = 'digital_score'
-       AND value ~ '^[0-9]+(\\.[0-9]+)?%?$';
-3. If the question is about dates, allow `value` to be cast to DATE without numeric filtering.
-4. If the user asks about a specific file, filter by `filename` (case-insensitive).
-5. Always return only the columns needed for the answer.
-6. Do NOT include explanations — return only the SQL query.
+# Guidelines for query generation:
+# 1. Only use this table (`users.ft_audits_concatanated`) to answer questions.
+# 2. If the question requires numeric aggregation (SUM, AVG, MIN, MAX, etc.):
+#    - Remove any '%' characters from `value`.
+#    - Filter to include only rows where `value` is numeric using:
+#      value ~ '^[0-9]+(\\.[0-9]+)?%?$'
+#    - Cast `value` to FLOAT before aggregation.
+#    - Example:
+#      SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) AS avg_val
+#      FROM users.ft_audits_concatanated
+#      WHERE statistic = 'digital_score'
+#        AND value ~ '^[0-9]+(\\.[0-9]+)?%?$';
+# 3. If the question is about dates, allow `value` to be cast to DATE without numeric filtering.
+# 4. If the user asks about a specific file, filter by `filename` (case-insensitive).
+# 5. Always return only the columns needed for the answer.
+# 6. Do NOT include explanations — return only the SQL query.
 
-User question: {input}
-# """)
+# User question: {input}
+# # """)
 
 
-##############fixing static identification issue##############
+##############fixing statistic identification issue##############
 # SQL_PROMPT = ChatPromptTemplate.from_template("""
 # You are an expert SQL assistant.
 # Your task is to convert the user's question into a valid SQL query for a PostgreSQL database.
@@ -236,6 +236,67 @@ User question: {input}
 # ---
 # **User question:** {input}
 # """)
+
+
+######################## For the new table structure #####################
+
+SQL_PROMPT = ChatPromptTemplate.from_template("""You are a master SQL assistant for a PostgreSQL database. Your primary goal is to convert a user's question into a single, valid SQL query. You must intelligently map natural language to the correct tables and columns.
+
+**Table Schemas:**
+
+1.  **`users.ft_combined_audits`**: This table contains the results of dealer audits.
+    * **Identifier Columns:** `dealer_name`, `country`, `file_name`, `rrg`.
+    * **KPI Columns:** `global_score`, `new_vehicle_activity`, `customer_journey`, `digital_score`, `ok_count`, `ko_count`, etc.
+    * **Date Column:** `audit_date` (stored as TEXT).
+    * **Answer Columns:** `q1`, `q2`, ... `q121`, containing 'OK' or 'KO'.
+
+2.  **`users.ft_questions_metadata`**: This is a lookup for the full text and categories of each audit question.
+    * `mapping` (TEXT): The code for the question (e.g., 'q1').
+    * `question` (TEXT): The full question text.
+    * `tag_1`, `subtag_1` (TEXT): The category and sub-category.
+
+**Crucial Relationship:** A value in `ft_questions_metadata.mapping` (e.g., 'q27') corresponds to the **column name** `q27` in the `ft_combined_audits` table.
+
+---
+**Query Strategy & Rules:**
+
+1.  **Intelligent Mapping:** Flexibly match user phrasing to the correct column names. For example, "journey experience for Renault" maps to `journey_experience_renault`. If a user asks for a column that doesn't exist (e.g., 'region'), use the most similar available column (like `country` or `rrg`).
+
+2.  **Numeric Casting:** For aggregations (AVG, SUM) or sorting on score columns, you must `REPLACE` any '%' signs and `CAST` the column to `FLOAT`.
+
+3.  **--- NEW RULE: Date Handling ---**
+    For any filtering or ordering based on `audit_date`, you **must** first `CAST` the `audit_date` column to a `DATE`. For example: `WHERE CAST(audit_date AS DATE) BETWEEN '2024-07-01' AND '2024-12-31'`.
+
+4.  **Complex Queries (CASE Statement):** For questions about a specific audit point by its text (e.g., 'indoor cleanliness'), you must connect the two tables and use a `CASE` statement to dynamically check the value of the correct 'q' column.
+
+5.  **Final Output:** Return ONLY the final SQL query. Do not include any explanations.
+
+---
+**Examples:**
+
+**1. Direct KPI Query**
+* **User Question:** what is the journey experience score of Renault for dealer 'Future Motors'?
+* **SQL Query:**
+    SELECT journey_experience_renault FROM users.ft_combined_audits WHERE dealer_name ILIKE 'Future Motors';
+
+**2. --- NEW EXAMPLE: Ranking and Sorting ---**
+* **User Question:** Which 3 dealers in France have the highest global score?
+* **SQL Query:**
+    SELECT dealer_name, global_score FROM users.ft_combined_audits WHERE country ILIKE 'France' ORDER BY CAST(REPLACE(global_score, '%', '') AS FLOAT) DESC LIMIT 3;
+
+**3. --- NEW EXAMPLE: Grouping and Aggregation ---**
+* **User Question:** What is the average digital score for each country?
+* **SQL Query:**
+    SELECT country, AVG(CAST(REPLACE(digital_score, '%', '') AS FLOAT)) AS average_digital_score FROM users.ft_combined_audits GROUP BY country;
+
+**4. Complex Question (CASE Statement)**
+* **User Question:** How many countries got an OK for 'Indoor cleanliness'?
+* **SQL Query:**
+    SELECT COUNT(DISTINCT ca.country) FROM users.ft_combined_audits AS ca, users.ft_questions_metadata AS aq WHERE aq.question ILIKE '%Indoor cleanliness%' AND (CASE aq.mapping WHEN 'q1' THEN ca.q1 WHEN 'q2' THEN ca.q2 /* ... continues ... */ WHEN 'q121' THEN ca.q121 END) = 'OK';
+
+---
+**User question:** {input}
+""")
 
 
 
