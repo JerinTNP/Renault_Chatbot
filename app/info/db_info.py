@@ -141,7 +141,7 @@ class CombinedAudit(Base):
     country = Column(String(50))
     dealer_name = Column(String(50))
     dealer_code = Column(String(50))
-    address_full = Column(String(50))
+    address_full = Column(String(250))
     rrg = Column(String(50))
     renault_sales_per_year = Column(String(50))
     dacia_sales_per_year = Column(String(50))
@@ -314,6 +314,46 @@ class QuestionsMetadata(Base):
     tag_1 = Column(String(255))
     subtag_1 = Column(String(255))
     mapping = Column(String(10), primary_key=True, nullable=False, unique=True)
+
+
+# class DealerStats(Base):
+#     """
+#     Represents individual dealer statistics from an audit report.
+#     Maps to the 'dealer_stats' table in the 'users' schema.
+#     """
+#     __tablename__ = "dealer_stats"
+#     __table_args__ = {"schema": "users"}
+
+#     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+#     statistic = Column(Text)
+#     value = Column(Text)
+#     dealer_name = Column(String(255))
+#     dealer_code = Column(String(50))
+#     country = Column(String(100))
+#     address_full = Column(Text)
+#     file_name = Column(Text)
+#     file_id = Column(UUID(as_uuid=True))
+#     chat_id = Column(UUID(as_uuid=True))
+#     upload_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+#     auditor = Column(String(255))
+
+# class DealerQaStats(Base):
+#     """
+#     Represents question and answer details from a dealer audit report.
+#     Maps to the 'dealer_qa_stats' table in the 'users' schema.
+#     """
+#     __tablename__ = "dealer_qa_stats"
+#     __table_args__ = {"schema": "users"}
+
+#     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+#     dealer_name = Column(String(255))
+#     dealer_code = Column(String(50))
+#     file_name = Column(Text)
+#     country = Column(String(100))
+#     auditor = Column(String(255))
+#     question = Column(Text)
+#     answer = Column(Text)
+#     upload_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 def init_db():

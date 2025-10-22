@@ -13,7 +13,7 @@ from pydantic import UUID4
 from sqlalchemy.orm import Session
 from app.info import auth_info
 from app.utils import output_source_correction,EMBEDDINGS, PERSIST_DIRECTORY
-from app.info.db_info import get_db,ChatInfo,UploadFileInfo,FileInfo, CombinedAudit
+from app.info.db_info import get_db,ChatInfo,UploadFileInfo,FileInfo, CombinedAudit, DealerStats, DealerQaStats
 from app.info.query_info import QueryInfo, SearchRequest, FileResponse
 from app.components.generate_tables.scripts import generate_table
 from app.components.file_handler import get_sharepoint_context
@@ -299,7 +299,7 @@ async def generate_tables(
         gu_id = str(gu_id)
 
         # Check if file already processed
-        existing = db.query(CombinedAudit).filter_by(file_id=gu_id).first()
+        existing = db.query(DealerStats).filter_by(file_id=gu_id).first()
         if existing:
             logging.info(f"file was already processed: {gu_id}")
             return JSONResponse(
