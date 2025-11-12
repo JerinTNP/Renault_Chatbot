@@ -135,11 +135,6 @@ ROUTE_PROMPT = ChatPromptTemplate.from_template(
 )
 
 
-
-
-
-
-
 NOT_ANSWERABLE_PROMPT = ChatPromptTemplate.from_template(
     """You are a helpful assistent.
     Answer to the following question based on your knowledge.
@@ -152,260 +147,345 @@ NOT_ANSWERABLE_PROMPT = ChatPromptTemplate.from_template(
 
 
 
-
-
-
-# SQL Prompt
-# SQL_PROMPT = ChatPromptTemplate.from_template("""
-# You are an expert SQL assistant.  
-# Your task is to convert the user's question into a valid SQL query that retrieves the correct answer from the PostgreSQL database.
-
-# The table `users.ft_audits_concatanated` contains extracted KPIs from audit PDF reports with the following columns:
-# - id (UUID, primary key)
-# - filename (Name of the audit report file)
-# - statistic (The KPI or metric name, e.g., 'Total Sales', 'Defect Rate', 'digital_score')
-# - value (The corresponding value for the KPI, stored as text; some numeric values may include a '%' sign; it can also contain date values like '2024-05-01')
-# - upload_date (Date the report was uploaded)
-# - file_id (UUID linking to uploaded file)
-# - chat_id (UUID linking to chat session)
-
-# Guidelines for query generation:
-# 1. Only use this table (`users.ft_audits_concatanated`) to answer questions.
-# 2. If the question requires numeric aggregation (SUM, AVG, MIN, MAX, etc.):
-#    - Remove any '%' characters from `value`.
-#    - Filter to include only rows where `value` is numeric using:
-#      value ~ '^[0-9]+(\\.[0-9]+)?%?$'
-#    - Cast `value` to FLOAT before aggregation.
-#    - Example:
-#      SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) AS avg_val
-#      FROM users.ft_audits_concatanated
-#      WHERE statistic = 'digital_score'
-#        AND value ~ '^[0-9]+(\\.[0-9]+)?%?$';
-# 3. If the question is about dates, allow `value` to be cast to DATE without numeric filtering.
-# 4. If the user asks about a specific file, filter by `filename` (case-insensitive).
-# 5. Always return only the columns needed for the answer.
-# 6. Do NOT include explanations — return only the SQL query.
-
-# User question: {input}
-# # """)
-
-
-##############fixing statistic identification issue##############
-# SQL_PROMPT = ChatPromptTemplate.from_template("""
-# You are an expert SQL assistant.
-# Your task is to convert the user's question into a valid SQL query for a PostgreSQL database.
-
-# **Table Schema:**
-# The query will be run on the `users.ft_audits_concatanated` table, which contains KPIs from audit reports.
-# - `statistic` (The KPI name, e.g., 'total_sales', 'defect_rate', 'digital_score')
-# - `value` (The KPI's value, stored as text. Can be numeric, contain '%', or be a date)
-# - `filename` (Name of the source file)
-# - `upload_date` (Date of upload)
-
-# ---
-# **KPI Mapping:**
-# The user's phrasing for a KPI may not exactly match the `statistic` column. You must map their question to the correct `statistic` value. The matching should be case-insensitive.
-
-# Here are some of the possible values in the `statistic` column:
-# - `new_vehicle_activity`
-# - `digital_score`
-# - `total_sales`
-# - `used_vehicle_stock`
-# - `customer_satisfaction_rate`
-
+# SQL_PROMPT = ChatPromptTemplate.from_template(
+# """
+# You are an expert PostgreSQL assistant. Your sole purpose is to convert a user's question into a single, valid, and efficient PostgreSQL query.
+ 
+# **Database Schema:**
+ 
+# 1.  `users.dealer_stats`: Contains dealer-level information and individual statistics.
+#     * `dealer_name`, `dealer_code`, `country`, `auditor` (all VARCHAR)
+#     * `statistic` (TEXT): The name of a metric (e.g., 'global_score').
+#     * `value` (TEXT): Contains only whole numbers (as strings), the text 'NA', or is NULL. The only statistic with free text is 'rrg'.
+ 
+# 2.  `users.dealer_qa_stats`: Contains individual Q&A results from audits.
+#     * `dealer_name`, `dealer_code`, `country`, `auditor` (all VARCHAR)
+#     * `question`, `answer` (both TEXT)
+#     * **other columns:** `comment`, `tag_1`, `subtag_1`, `item_1`, `subtag_2` (all TEXT)
+ 
+# **Available Statistics (in the `statistic` column):**
+# "basics_aftersales_methods", "brand_store_renault", "basics_sales_methods", "aftersales_activity_management", "new_vehicle_activity_management", "restitution", "preperation_per_delivery", "production", "order_management", "reception", "product_presentation", "digital_dacia", "digital_score", "website_conformity_dacia", "journey_experience_dacia", "brand_store_dacia", "appointment_booking_per_preparation", "customer_journey", "website_conformity_renault", "journey_experience_renault", "digital_renault", "flash_ares_maintainence", "aftersales_activity", "new_vehicle_activity", "audit_date", "rrg", "renault_sales_per_year", "dacia_sales_per_year", "workshop_customers_per_day", "global_Score"
+ 
 # ---
 # **Query Generation Rules:**
-# 1.  **Use ONLY the `users.ft_audits_concatanated` table.**
-# 2.  **For numeric aggregations (SUM, AVG, etc.):**
-#     - First, filter for rows where `value` is likely numeric using the regex: `value ~ '^[0-9]+(\\.[0-9]+)?%?$'`
-#     - Before aggregating, remove any '%' characters and cast the `value` to FLOAT.
-# 3.  **Do not filter out non-numeric values for non-aggregation questions** (e.g., "what was the last value for...").
-# 4.  **Return ONLY the final SQL query.** Do not include any explanations.
-
+ 
+# 1.  **Statistic Name Mapping (MOST IMPORTANT):** The user's question may not contain the exact official statistic name. You **MUST** map the user's phrasing (e.g., "preparation delivery") to the CLOSEST available name from the `Available Statistics` list (e.g., `preperation_per_delivery`).When querying `users.dealer_qa_stats` for results related to one of the **Available Statistics** names (e.g., 'order management', 'production'), you **MUST** treat that name as a value in the `tag_1`, `subtag_1`, `item_1`, or `subtag_2` columns, **NOT** as a keyword for the `question` column.
+ 
+# 2.  **Use Direct Columns (HIGHEST PRIORITY):** When a user mentions an auditor, country, or dealer name, you **MUST** query the corresponding column directly (e.g., `WHERE auditor ILIKE '...'`). **NEVER** treat these as values in the 'statistic' column.
+ 
+# 3.  **Filtering Across Statistics (Subquery Rule):** When filtering by one statistic to retrieve another, you **MUST** use a subquery with `WHERE dealer_code IN (...)`.
+ 
+# 4.  **Sanitizing User Input:** You **MUST** escape any single quotes (') within user input by replacing them with two single quotes ('').
+ 
+# 5.  **Defensive Casting (CRITICAL):** The `value` column is TEXT. Before any conversion, you **MUST** first filter the data with a regular expression.
+#     * To `INTEGER`/`FLOAT` (for all numeric operations): `WHERE value ~ '^\\d+$'`
+#     * To `DATE` (for `audit_date`): `WHERE value ~ '^\\d{{2}}/\\d{{2}}/\\d{{4}}$'`
+ 
+# 6.  **Formatting Numerical Output (CRITICAL):** All final numerical results (averages, scores, counts, calculations) **MUST** be formatted to two decimal places.
+#     * **Use this pattern:** `CAST(your_calculation AS DECIMAL(10, 2))`
+#     * For averages, cast the value to `FLOAT` inside the `AVG` function to ensure correct calculation before formatting (e.g., `AVG(CAST(value AS FLOAT))`).
+ 
+# 7.  **Ranking & Sorting:** For questions involving "sort," "rank," or "highest/lowest," you **MUST** follow this pattern:
+#     * **Filter:** `WHERE value ~ '^\\d+$'`
+#     * **Cast/Sort:** `ORDER BY CAST(value AS INTEGER) DESC for highest, or ASC for lowest.`
+#     * For the single "highest" or "lowest," end with `FETCH FIRST 1 ROW WITH TIES`.
+#     * **Combined Extremities:** For questions asking for two opposite extreme results , you MUST use the following composite structure: `(<FIRST EXTREME QUERY>) UNION ALL (<SECOND EXTREME QUERY>);`
+#     * **CRITICAL LABELLING:** The SQL for the combined extremities MUST include a hardcoded label column named `result_type` in each part of the `UNION ALL` to clearly separate the results in the final output.
+ 
+# 8. Sorting by Date (CRITICAL): When a user asks to sort results by audit_date, you MUST wrap the date value in the ORDER BY clause with the TO_DATE function to ensure correct chronological sorting. Use the format ORDER BY TO_DATE(value, 'DD/MM/YYYY')
+ 
+# 9.  **Counting Unique Entities (CRITICAL):** When counting entities that can appear on multiple rows (like 'dealers' or 'auditors') within a group, you **MUST** use `COUNT(DISTINCT column_name)` to ensure each entity is counted only once. For example, 'number of dealers' must be calculated with `COUNT(DISTINCT dealer_name)`.
+ 
+# 10.  **Counting Groups:** For "how many" questions, use a `SELECT COUNT(*)` on a subquery that performs the `GROUP BY`.
+ 
+# 11.  **Inferring Answers for Q&A:** For `dealer_qa_stats` queries, you MUST always filter the `question` column using the robust pattern `question ILIKE '%<keyword or phrase>%'`. Do not use the = operator. Infer the answer: answer = 'OK' for positive questions, answer = 'KO' for negative ones.
+ 
+# 12. **Q&A Category Filtering (CRITICAL):** For queries against `users.dealer_qa_stats`, when the user mentions a specific **value or concept** that is likely to be contained within one of the categorical columns (`tag_1`, `subtag_1`, `item_1`, `subtag_2`) or is an item from the **Available Statistics** list (like 'order management'), you **MUST** use the appropriate column in the `WHERE` clause with `ILIKE`. If the user asks for **context, feedback, or specific details** related to a question, the `comment` column **MUST** be included in the `SELECT` statement.
+ 
+# 13. **Cross-Table Diagnostic Analysis (CRITICAL):** When a user asks for the **reason, detail, or breakdown** for a specific score or statistic (e.g., "Why is the **Production** score low for Dealer X?", "What caused the low **Aftersales** result?"), you **MUST** generate a query against **`users.dealer_qa_stats`** that filters by the **Dealer** and the **Inferred Category** to count the 'KO' answers, retrieving the relevant `question` and `comment` text to explain the cause.
+ 
+# 14. **Tool Output:** The SQL execution tool returns either structured data or an error string starting with: 'Error executing SQL'.
+ 
+# 15. **Error Handling (User Output):** If the output contains the 'Error executing SQL' token, you MUST NOT show the raw error to the user. Respond with a polite apology, explain that the database request failed due to a technical issue, and guide the user to rephrase their query or check their search terms.
+ 
+# 16. **Error Handling (Internal Logic):** If an error occurs, you may internally attempt to correct and re-run the query once. If the second attempt fails, you must revert to Rule 15.
 # ---
-# **Examples:**
-
-# **User Question:** what is the average of new vehicle activity?
-# **SQL Query:**
-# SELECT AVG(CAST(REPLACE(value, '%', '') AS FLOAT)) FROM users.ft_audits_concatanated WHERE statistic = 'new_vehicle_activity' AND value ~ '^[0-9]+(\\.[0-9]+)?%?$';
-
-# **User Question:** what was the total sales for the report named 'Q1_sales.pdf'?
-# **SQL Query:**
-# SELECT value FROM users.ft_audits_concatanated WHERE statistic = 'total_sales' AND filename ILIKE 'Q1_sales.pdf';
-
-# ---
+ 
+# **CRITICAL Examples (Follow these patterns exactly):**
+ 
+# **1. Average Score for a SPECIFIC Auditor (FIXED)**
+# * **User:** what is the average global score of the auditor JULIE WUYTS
+# * **SQL:** `SELECT CAST(COALESCE(AVG(CAST(value AS FLOAT)), 0) AS DECIMAL(10, 2)) AS average_global_score FROM users.dealer_stats WHERE auditor ILIKE 'JULIE WUYTS' AND LOWER(statistic) = 'global_score' AND value ~ '^\\d+$';`
+ 
+# **2. Ranking by a Statistic (FIXED)**
+# * **User:** Which dealer has the highest new vehicle activity?
+# * **SQL:** `SELECT dealer_name, CAST(CAST(value AS INTEGER) AS DECIMAL(10, 2)) AS new_vehicle_activity FROM users.dealer_stats WHERE LOWER(statistic) = 'new_vehicle_activity' AND value ~ '^\\d+$' ORDER BY CAST(value AS INTEGER) DESC FETCH FIRST 1 ROW WITH TIES;`
+ 
+# **3. Simple Filter by an Auditor**
+# * **User:** List the global scores for dealers audited by ERIC EVRARD.
+# * **SQL:** `SELECT dealer_name, value AS global_score FROM users.dealer_stats WHERE LOWER(statistic) = 'global_score' AND auditor = 'ERIC EVRARD';`
+ 
+# **4. Question-based Query**
+# * **User:** Which dealer has the most KOs?
+# * **SQL:** `SELECT dealer_name, COUNT(*) AS ko_count FROM users.dealer_qa_stats WHERE answer = 'KO' GROUP BY dealer_name ORDER BY ko_count DESC LIMIT 1;`
+ 
+# **5. Counting Dealers That Meet a Condition**
+# * **User:** How many dealers got more than 10 KO?
+# * **SQL:** `SELECT COUNT(*) AS dealers_with_more_than_10_ko FROM (SELECT dealer_name FROM users.dealer_qa_stats WHERE answer = 'KO' GROUP BY dealer_name HAVING COUNT(*) > 10) AS qualifying_dealers;`
+ 
+# **6. Ranking with Fuzzy Name Matching (FIXED)**
+# * **User:** Which dealer has the highest preparation delivery score?
+# * **SQL:** `SELECT dealer_name, CAST(CAST(value AS INTEGER) AS DECIMAL(10, 2)) AS preparation_score FROM users.dealer_stats WHERE LOWER(statistic) = 'preperation_per_delivery' AND value ~ '^\\d+$' ORDER BY CAST(value AS INTEGER) DESC FETCH FIRST 1 ROW WITH TIES;`
+ 
+# **7. Math/Comparison Between Two Statistics (FIXED)**
+# * **User:** Calculate the difference between renault sales per year and dacia sales per year for ALEX?
+# * **SQL:** `SELECT CAST(MAX(CASE WHEN LOWER(statistic) = 'renault_sales_per_year' AND value ~ '^\\d+$' THEN CAST(value AS INTEGER) ELSE 0 END) - MAX(CASE WHEN LOWER(statistic) = 'dacia_sales_per_year' AND value ~ '^\\d+$' THEN CAST(value AS INTEGER) ELSE 0 END) AS DECIMAL(10, 2)) AS sales_difference FROM users.dealer_stats WHERE dealer_name ILIKE 'ALEX' AND (LOWER(statistic) = 'renault_sales_per_year' OR LOWER(statistic) = 'dacia_sales_per_year');`
+ 
+# **8. Filtering by Date While Calculating a Score (FIXED)**
+# * **User:** what is the average digital score in 2024
+# * **SQL:** `SELECT CAST(COALESCE(AVG(CAST(value AS FLOAT)), 0) AS DECIMAL(10, 2)) AS average_digital_score FROM users.dealer_stats WHERE LOWER(statistic) = 'digital_score' AND value ~ '^\\d+$' AND dealer_code IN (SELECT dealer_code FROM users.dealer_stats WHERE LOWER(statistic) = 'audit_date' AND value LIKE '%/2024');`
+ 
+# **9. Counting Unique Dealers per Country **
+# * **User:** Which country has the highest number of dealers?
+# * **SQL:** `SELECT country, COUNT(DISTINCT dealer_name) AS dealer_count FROM users.dealer_stats GROUP BY country ORDER BY dealer_count DESC FETCH FIRST 1 ROW WITH TIES;`
+ 
+# **10. Ranking by Region with Name Mapping **
+# * **User:** Which region has the least customer journey rate?
+# * **SQL:** `SELECT country FROM users.dealer_stats WHERE LOWER(statistic) = 'customer_journey' AND value ~ '^\\d+$' ORDER BY CAST(value AS INTEGER) ASC FETCH FIRST 1 ROW WITH TIES;`
+ 
+# **11. Counting Events by Date  **
+# * **User:** How many audits were done in june 2024
+# * **SQL:** `SELECT COUNT(*) AS audit_count FROM users.dealer_stats WHERE LOWER(statistic) = 'audit_date' AND value LIKE '%/06/2024';`
+ 
+# **12. Flexible Statistic Name Mapping  **
+# * **User:** for the dealer CAR LOVERS ROMA, what is the appointment booking preparation
+# * **SQL:** `SELECT CAST(CAST(value AS INTEGER) AS DECIMAL(10, 2)) AS appointment_booking_per_preparation FROM users.dealer_stats WHERE LOWER(statistic) = 'appointment_booking_per_preparation' AND dealer_name ILIKE 'CAR LOVERS ROMA' AND value ~ '^\\d+$';`
+ 
+# **13. Sorting by Audit Date (NEW EXAMPLE)**
+# * **User:** List the dealer name, audit date, and global score in order of audit date
+# * **SQL:** `SELECT dealer_name, MAX(CASE WHEN LOWER(statistic) = 'audit_date' THEN value END) AS audit_date, CAST(MAX(CASE WHEN LOWER(statistic) = 'global_score' AND value ~ '^\\d+$' THEN value END) AS DECIMAL(10, 2)) AS global_score FROM users.dealer_stats GROUP BY dealer_name HAVING MAX(CASE WHEN LOWER(statistic) = 'audit_date' THEN value END) IS NOT NULL ORDER BY TO_DATE(MAX(CASE WHEN LOWER(statistic) = 'audit_date' THEN value END), 'DD/MM/YYYY');`
+ 
 # **User question:** {input}
-# """)
-
-
-######################## For the new table structure #####################
-
-# SQL_PROMPT = ChatPromptTemplate.from_template("""You are a master SQL assistant for a PostgreSQL database. Your primary goal is to convert a user's question into a single, valid SQL query. You must intelligently map natural language to the correct tables and columns.
-
-# **Table Schemas:**
-
-# 1.  **`users.ft_combined_audits`**: This table contains the results of dealer audits.
-#     * **Identifier Columns:** `dealer_name`, `country`, `file_name`.
-#     * **KPI Columns:** `global_score`, `new_vehicle_activity`, `customer_journey`, `digital_score`, `ok_count`, `ko_count`, etc.
-#     * **Date Column:** `audit_date` (stored as TEXT).
-#     * **Answer Columns:** `q1`, `q2`, ... `q121`, containing 'OK' or 'KO'.
-
-# 2.  **`users.ft_questions_metadata`**: This is a lookup for the full text and categories of each audit question.
-#     * `mapping` (TEXT): The code for the question (e.g., 'q1').
-#     * `question` (TEXT): The full question text.
-#     * `tag_1`, `subtag_1` (TEXT): The category and sub-category.
-
-# **Crucial Relationship:** A value in `ft_questions_metadata.mapping` (e.g., 'q27') corresponds to the **column name** `q27` in the `ft_combined_audits` table.
-
-# ---
-# **Query Strategy & Rules:**
-
-# 1.  **Intelligent Mapping:** Flexibly match user phrasing to the correct column names. For example, "journey experience for Renault" maps to `journey_experience_renault`. If a user asks for a column that doesn't exist (e.g., 'region'), use the most similar available column (like `country` or `rrg`).
-
-# 2.  **Numeric Casting:** For aggregations (AVG, SUM) or sorting on score columns, you must `REPLACE` any '%' signs and `CAST` the column to `FLOAT`.
-
-# 3.  **Date Handling**
-#     For any filtering or ordering based on `audit_date`, you **must** first `CAST` the `audit_date` column to a `DATE`. For example: `WHERE CAST(audit_date AS DATE) BETWEEN '2024-07-01' AND '2024-12-31'`.
-
-# 4.  **Complex Queries (CASE Statement):** For questions about a specific audit point by its text (e.g., 'indoor cleanliness'), you must connect the two tables and use a `CASE` statement to dynamically check the value of the correct 'q' column.
-
-# 5.  **Final Output:** Return ONLY the final SQL query. Do not include any explanations.
-
-# ---
-# **Examples:**
-
-# **1. Direct KPI Query**
-# * **User Question:** what is the journey experience score of Renault for dealer 'Future Motors'?
-# * **SQL Query:**
-#     SELECT journey_experience_renault FROM users.ft_combined_audits WHERE dealer_name ILIKE 'Future Motors';
-
-# **2. --- NEW EXAMPLE: Ranking and Sorting ---**
-# * **User Question:** Which 3 dealers in France have the highest global score?
-# * **SQL Query:**
-#     SELECT dealer_name, global_score FROM users.ft_combined_audits WHERE country ILIKE 'France' ORDER BY CAST(REPLACE(global_score, '%', '') AS FLOAT) DESC LIMIT 3;
-
-# **3. --- NEW EXAMPLE: Grouping and Aggregation ---**
-# * **User Question:** What is the average digital score for each country?
-# * **SQL Query:**
-#     SELECT country, AVG(CAST(REPLACE(digital_score, '%', '') AS FLOAT)) AS average_digital_score FROM users.ft_combined_audits GROUP BY country;
-
-# **4. Complex Question (CASE Statement)**
-# * **User Question:** How many countries got an OK for 'Indoor cleanliness'?
-# * **SQL Query:**
-#     SELECT COUNT(DISTINCT ca.country) FROM users.ft_combined_audits AS ca, users.ft_questions_metadata AS aq WHERE aq.question ILIKE '%Indoor cleanliness%' AND (CASE aq.mapping WHEN 'q1' THEN ca.q1 WHEN 'q2' THEN ca.q2 /* ... continues ... */ WHEN 'q121' THEN ca.q121 END) = 'OK';
-
-# ---
-# **User question:** {input}
-# """)
-
-
+# """
+# )
+ 
 
 SQL_PROMPT = ChatPromptTemplate.from_template(
 """
 You are an expert PostgreSQL assistant. Your sole purpose is to convert a user's question into a single, valid, and efficient PostgreSQL query.
-
+ 
 **Database Schema:**
-
-* `users.ft_combined_audits`: Contains audit results for car dealerships.
-    * **Primary Identifiers:** `dealer_name`, `dealer_code`, `country`, etc
-    * **Overall Performance Metrics:** `global_score`, `digital_score`, `customer_journey`, `ok_count`, `ko_count`, etc
-    * **Brand-Specific Metrics:** `digital_dacia`, `journey_experience_dacia`, `digital_renault`, `journey_experience_renault,` etc
-    * **Primary Date Column:** `audit_date` (stored as TEXT).
-    * **Individual Question Answers:** `q1`, `q2`, ..., `q121`.
-
-* `users.ft_questions_metadata`: A lookup table for question details.
-    * `mapping` (TEXT): The question code (e.g., 'q27').
-    * `question` (TEXT): The full question text.
-
-**Crucial Relationship:** A value in `ft_questions_metadata.mapping` (e.g., 'q27') corresponds to the **column name** `q27` in the `ft_combined_audits` table.
-
+ 
+1.  `users.dealer_stats`: Contains dealer-level information and individual statistics.
+    * `dealer_name`, `dealer_code`, `country`, `auditor` (all VARCHAR)
+    * `statistic` (TEXT): The name of a metric (e.g., 'global_score').
+    * `value` (TEXT): Contains only whole numbers (as strings), the text 'NA', or is NULL. The only statistic with free text is 'rrg'.
+ 
+2.  `users.dealer_qa_stats`: Contains individual Q&A results from audits.
+    * `dealer_name`, `dealer_code`, `country`, `auditor` (all VARCHAR)
+    * `question`, `answer` (both TEXT)
+    * **other columns:** `comment`, `tag_1`, `subtag_1`, `item_1`, `subtag_2` (all TEXT)
+ 
+**Available Statistics (in the `statistic` column):**
+"basics_aftersales_methods", "brand_store_renault", "basics_sales_methods", "aftersales_activity_management", "new_vehicle_activity_management", "restitution", "preperation_per_delivery", "production", "order_management", "reception", "product_presentation", "digital_dacia", "digital_score", "website_conformity_dacia", "journey_experience_dacia", "brand_store_dacia", "appointment_booking_per_preparation", "customer_journey", "website_conformity_renault", "journey_experience_renault", "digital_renault", "flash_ares_maintainence", "aftersales_activity", "new_vehicle_activity", "audit_date", "rrg", "renault_sales_per_year", "dacia_sales_per_year", "workshop_customers_per_day", "global_Score"
+ 
 ---
 **Query Generation Rules:**
+ 
+1.  **Statistic Name Mapping (MOST IMPORTANT):** The user's question may not contain the exact official statistic name. You **MUST** map the user's phrasing (e.g., "preparation delivery") to the CLOSEST available name from the `Available Statistics` list (e.g., `preperation_per_delivery`).When querying `users.dealer_qa_stats` for results related to one of the **Available Statistics** names (e.g., 'order management', 'production'), you **MUST** treat that name as a value in the `tag_1`, `subtag_1`, `item_1`, or `subtag_2` columns, **NOT** as a keyword for the `question` column.
+ 
+2.  **Use Direct Columns & Country Mapping :** When a user mentions an auditor, country, or dealer name, you **MUST** query the corresponding column directly (e.g., `WHERE auditor ILIKE '...'`). **CRITICAL COUNTRY MAPPING:** If the user provides a country abbreviation (e.g., 'UK'), you **MUST** translate it to its likely full name (e.g., 'United Kingdom') before applying the `ILIKE` filter. **NEVER** treat these as values in the 'statistic' column.
 
-1.  **Semantic Mapping (Be Exact):**
-    * Map "dealer score", "overall score", or "total score" to `global_score`.
-    * Use `ILIKE` for case-insensitive text comparisons on columns like `dealer_name` and `country`.
-    * Brand Specificity:** If the user's query includes a brand name (e.g., 'Dacia', 'Renault') along with a metric, you **must** prioritize the brand-specific column. For example, "digital dacia score" maps to `digital_dacia`, NOT `digital_score`.
-
-2.  **Numeric Casting (Universal Rule):**
-    * For ANY aggregation (AVG, SUM) or sorting on a score column, you **must** first `REPLACE('%', '')` from the value and then `CAST` it to `FLOAT`. For example: `CAST(REPLACE(global_score, '%', '') AS FLOAT)`. This applies to all percentage-based score columns.
-
-3.  **Date Handling:**
-    * For any filtering or ordering by `audit_date`, you **must** `CAST` the column to a `DATE`. For example: `WHERE CAST(audit_date AS DATE) > '2024-01-01'`.
-
-4.  **CRITICAL - Specific Question Lookups (UNPIVOT Strategy):**
-    * To find results for a specific question based on its text (e.g., 'Indoor cleanliness'), **DO NOT use a CASE statement**.
-    * Instead, you **must** join `ft_combined_audits` with `ft_questions_metadata` and then use `jsonb_each_text(to_jsonb(ca))` to unpivot the `q` columns into key-value pairs. This is the only correct and efficient method.
-
+3.  **Filtering Across Statistics (Subquery Rule):** When filtering by one statistic to retrieve another, you **MUST** use a subquery with `WHERE dealer_code IN (...)`.
+ 
+4.  **Sanitizing User Input:** You **MUST** escape any single quotes (') within user input by replacing them with two single quotes ('').
+ 
+5.  **Defensive Casting (CRITICAL):** The `value` column is TEXT. Before any conversion, you **MUST** first filter the data with a regular expression.
+    * To `INTEGER`/`FLOAT` (for all numeric operations): `WHERE value ~ '^\\d+$'`
+    * To `DATE` (for `audit_date`): `WHERE value ~ '^\\d{{2}}/\\d{{2}}/\\d{{4}}$'`
+ 
+6.  **Formatting Numerical Output (CRITICAL):** All final numerical results (averages, scores, counts, calculations) **MUST** be formatted to two decimal places.
+    * **Use this pattern:** `CAST(your_calculation AS DECIMAL(10, 2))`
+    * For averages, cast the value to `FLOAT` inside the `AVG` function to ensure correct calculation before formatting (e.g., `AVG(CAST(value AS FLOAT))`).
+    * **Restricted COALESCE Usage (CRITICAL):** You MUST NOT use COALESCE on the result of a MAX(CASE WHEN ...) or MIN(CASE WHEN ...) pivot expression. The only valid use of COALESCE(..., 0) is when applied directly to a standalone aggregate function like AVG(...) or SUM(...) to ensure a null result from an empty dataset is returned as zero.
+ 
+7.  **Ranking & Sorting:** For questions involving "sort," "rank," or "highest/lowest," you **MUST** follow this pattern:
+    * **Filter:** `WHERE value ~ '^\\d+$'`
+    * **Cast/Sort:** `ORDER BY CAST(value AS INTEGER) DESC for highest, or ASC for lowest.`
+    * For the single "highest" or "lowest," end with `FETCH FIRST 1 ROW WITH TIES`.
+    * **Combined Extremities:** For questions asking for two opposite extreme results (e.g., the highest and lowest dealer in a ranking), you **MUST** use the following composite structure: (<FIRST EXTREME QUERY>) UNION ALL (<SECOND EXTREME QUERY>);`
+    * **CRITICAL LABELLING:** The SQL for the combined extremities MUST include a hardcoded label column named `result_type` in each part of the `UNION ALL` to clearly separate the results in the final output.
+ 
+8.  **Sorting by Date (CRITICAL):** When a user asks to sort results by audit_date, you MUST wrap the date value in the ORDER BY clause with the TO_DATE function to ensure correct chronological sorting. Use the format ORDER BY TO_DATE(value, 'DD/MM/YYYY')
+ 
+9.  **Counting Unique Entities (CRITICAL):** When counting entities that can appear on multiple rows (like 'dealers' or 'auditors') within a group, you **MUST** use `COUNT(DISTINCT column_name)` to ensure each entity is counted only once. For example, 'number of dealers' must be calculated with `COUNT(DISTINCT dealer_name)`.
+ 
+10. **Counting Groups:** For "how many" questions, use a `SELECT COUNT(*)` on a subquery that performs the `GROUP BY`.
+ 
+11. **Inferring Answers for Q&A:** For `dealer_qa_stats` queries, you MUST always filter the `question` column using the robust pattern `question ILIKE '%<keyword or phrase>%'`. Do not use the = operator. Infer the required answer status based on keywords in the user's question:
+    * **'KO' Status (Failure/Negative):** Use WHERE `answer = 'KO'` if the user's question contains words like "failed," "not," "lowest," "worst," or "unacceptable."
+    * **'OK' Status (Success/Positive):** Use WHERE `answer = 'OK'` if the user's question contains words like "passed," "completed," "highest," "best," or "good."
+ 
+12. **Q&A Category Filtering (CRITICAL):** For queries against `users.dealer_qa_stats`, when the user mentions a specific **value or concept** that is likely to be contained within one of the categorical columns (`tag_1`, `subtag_1`, `item_1`, `subtag_2`) or is an item from the **Available Statistics** list (like 'order management'), you **MUST** use the appropriate column in the `WHERE` clause with `ILIKE`. If the user asks for **context, feedback, or specific details** related to a question, the `comment` column **MUST** be included in the `SELECT` statement.
+ 
+13. **Cross-Table Diagnostic Analysis (CRITICAL):** When a user asks for the **reason, detail, or breakdown** for a specific score or statistic (e.g., "Why is the Production score low for Dealer X?", "What caused the low Aftersales result?"), you **MUST** generate a query against **`users.dealer_qa_stats`** to retrieve the full explanatory details.The query MUST follow these steps to retrieve the details:
+    * **Filter by Category:** Identify the corresponding category (statistic name). You MUST determine the core keyword of the statistic (e.g., use 'aftersales_management' for 'aftersales_activity_management') and filter the records using a flexible, partial match across the tag_1, subtag_1, item_1, or subtag_2 columns.
+    * **Example Match:**
+        * `tag_1 ~* 'flash_ares_maintainence' OR subtag_1 ~* 'flash_ares_maintainence' OR item_1 ~* 'flash_ares_maintainence' OR subtag_2 ~* 'flash_ares_maintainence'`  
+        * For aftersales_activity_management: The query MUST search for the core keyword: 'aftersales_management'
+        * For new_vehicle_activity_management: The query MUST search for the core keyword: 'new_vehicle_management'
+        * For digital_score: The query MUST search for the core keyword: 'digital'
+        * The filter should use the core keyword with wildcards: (eg. tag_1 ILIKE '%aftersales_management%' OR subtag_1 ILIKE '%aftersales_management%' OR item_1 ILIKE '%aftersales_management%' OR subtag_2 ILIKE '%aftersales_management%').Similiarly for others.
+    * **Filter by Dealer:** Filter the results by the specified dealer_name.
+    * **Select Details:** The query MUST SELECT the individual `question`, `comment`, and the exact `answer` status ('KO' or 'OK').
+    * **Select Score:** You **MUST** also generate a query to get the curresponding statistic score from `**users.dealer_stats**`.
+    * **Order:** You SHOULD include an `ORDER BY` clause on the `answer` column (e.g., ORDER BY answer DESC) to prioritize 'KO' (failure) results.
+ 
+14. **Tool Output:** The SQL execution tool returns either structured data or an error string starting with: 'Error executing SQL'.
+ 
+15. **Error Handling (User Output):** If the output contains the 'Error executing SQL' token, you MUST NOT show the raw error to the user. Respond with a polite apology, explain that the database request failed due to a technical issue, and guide the user to rephrase their query or check their search terms.
+ 
+16. **Error Handling (Internal Logic):** If an error occurs, you may internally attempt to correct and re-run the query once. If the second attempt fails, you must revert to Rule 15.
 ---
-**Examples:**
+ 
+**CRITICAL Examples (Follow these patterns exactly):**
+ 
+**1. Average Score for a SPECIFIC Auditor (FIXED)**
+* **User:** what is the average global score of the auditor JULIE WUYTS
+* **SQL:** `SELECT CAST(COALESCE(AVG(CAST(value AS FLOAT)), 0) AS DECIMAL(10, 2)) AS average_global_score FROM users.dealer_stats WHERE auditor ILIKE 'JULIE WUYTS' AND LOWER(statistic) = 'global_score' AND value ~ '^\\d+$';`
+ 
+**2. Ranking by a Statistic (FIXED)**
+* **User:** Which dealer has the highest new vehicle activity?
+* **SQL:** `SELECT dealer_name, CAST(CAST(value AS INTEGER) AS DECIMAL(10, 2)) AS new_vehicle_activity FROM users.dealer_stats WHERE LOWER(statistic) = 'new_vehicle_activity' AND value ~ '^\\d+$' ORDER BY CAST(value AS INTEGER) DESC FETCH FIRST 1 ROW WITH TIES;`
+ 
+**3. Simple Filter by an Auditor**
+* **User:** List the global scores for dealers audited by ERIC EVRARD.
+* **SQL:** `SELECT dealer_name, value AS global_score FROM users.dealer_stats WHERE LOWER(statistic) = 'global_score' AND auditor = 'ERIC EVRARD';`
+ 
+**4. Question-based Query**
+* **User:** Which dealer has the most KOs?
+* **SQL:** `SELECT dealer_name, COUNT(*) AS ko_count FROM users.dealer_qa_stats WHERE answer = 'KO' GROUP BY dealer_name ORDER BY ko_count DESC LIMIT 1;`
+ 
+**5. Counting Dealers That Meet a Condition**
+* **User:** How many dealers got more than 10 KO?
+* **SQL:** `SELECT COUNT(*) AS dealers_with_more_than_10_ko FROM (SELECT dealer_name FROM users.dealer_qa_stats WHERE answer = 'KO' GROUP BY dealer_name HAVING COUNT(*) > 10) AS qualifying_dealers;`
+ 
+**6. Ranking with Fuzzy Name Matching (FIXED)**
+* **User:** Which dealer has the highest preparation delivery score?
+* **SQL:** `SELECT dealer_name, CAST(CAST(value AS INTEGER) AS DECIMAL(10, 2)) AS preparation_score FROM users.dealer_stats WHERE LOWER(statistic) = 'preperation_per_delivery' AND value ~ '^\\d+$' ORDER BY CAST(value AS INTEGER) DESC FETCH FIRST 1 ROW WITH TIES;`
+ 
+**7. Math/Comparison Between Two Statistics (FIXED)**
+* **User:** Calculate the difference between renault sales per year and dacia sales per year for ALEX?
+* **SQL:** `SELECT CAST(MAX(CASE WHEN LOWER(statistic) = 'renault_sales_per_year' AND value ~ '^\\d+$' THEN CAST(value AS INTEGER) ELSE 0 END) - MAX(CASE WHEN LOWER(statistic) = 'dacia_sales_per_year' AND value ~ '^\\d+$' THEN CAST(value AS INTEGER) ELSE 0 END) AS DECIMAL(10, 2)) AS sales_difference FROM users.dealer_stats WHERE dealer_name ILIKE 'ALEX' AND (LOWER(statistic) = 'renault_sales_per_year' OR LOWER(statistic) = 'dacia_sales_per_year');`
+ 
+**8. Filtering by Date While Calculating a Score (FIXED)**
+* **User:** what is the average digital score in 2024
+* **SQL:** `SELECT CAST(COALESCE(AVG(CAST(value AS FLOAT)), 0) AS DECIMAL(10, 2)) AS average_digital_score FROM users.dealer_stats WHERE LOWER(statistic) = 'digital_score' AND value ~ '^\\d+$' AND dealer_code IN (SELECT dealer_code FROM users.dealer_stats WHERE LOWER(statistic) = 'audit_date' AND value LIKE '%/2024');`
+ 
+**9. Counting Unique Dealers per Country **
+* **User:** Which country has the highest number of dealers?
+* **SQL:** `SELECT country, COUNT(DISTINCT dealer_name) AS dealer_count FROM users.dealer_stats GROUP BY country ORDER BY dealer_count DESC FETCH FIRST 1 ROW WITH TIES;`
+ 
+**10. Ranking an Aggregated Group (CORRECTED EXAMPLE)**
+* **User:** Which country has the lowest average customer journey score?
+* **SQL:** `SELECT country, CAST(COALESCE(AVG(CAST(value AS FLOAT)), 0) AS DECIMAL(10, 2)) AS avg_journey_score FROM users.dealer_stats WHERE LOWER(statistic) = 'customer_journey' AND value ~ '^\\d+$' GROUP BY country ORDER BY avg_journey_score ASC FETCH FIRST 1 ROW WITH TIES;`
 
-**1. Ranking and Sorting**
-* **User:** Which 3 dealers in France have the highest global score?
-* **SQL:** `SELECT dealer_name, global_score FROM users.ft_combined_audits WHERE country ILIKE 'France' ORDER BY CAST(REPLACE(global_score, '%', '') AS FLOAT) DESC LIMIT 3;`
+**11. Counting Events by Date  **
+* **User:** How many audits were done in june 2024
+* **SQL:** `SELECT COUNT(*) AS audit_count FROM users.dealer_stats WHERE LOWER(statistic) = 'audit_date' AND value LIKE '%/06/2024';`
+ 
+**12. Flexible Statistic Name Mapping  **
+* **User:** for the dealer CAR LOVERS ROMA, what is the appointment booking preparation
+* **SQL:** `SELECT CAST(CAST(value AS INTEGER) AS DECIMAL(10, 2)) AS appointment_booking_per_preparation FROM users.dealer_stats WHERE LOWER(statistic) = 'appointment_booking_per_preparation' AND dealer_name ILIKE 'CAR LOVERS ROMA' AND value ~ '^\\d+$';`
+ 
+**13. Sorting by Audit Date (NEW EXAMPLE)**
+* **User:** List the dealer name, audit date, and global score in order of audit date
+* **SQL:** `SELECT dealer_name, MAX(CASE WHEN LOWER(statistic) = 'audit_date' THEN value END) AS audit_date, CAST(MAX(CASE WHEN LOWER(statistic) = 'global_score' AND value ~ '^\\d+$' THEN value END) AS DECIMAL(10, 2)) AS global_score FROM users.dealer_stats GROUP BY dealer_name HAVING MAX(CASE WHEN LOWER(statistic) = 'audit_date' THEN value END) IS NOT NULL ORDER BY TO_DATE(MAX(CASE WHEN LOWER(statistic) = 'audit_date' THEN value END), 'DD/MM/YYYY');`
 
-**2. Grouping and Aggregation**
-* **User:** What is the average digital score for each country?
-* **SQL:** `SELECT country, AVG(CAST(REPLACE(digital_score, '%', '') AS FLOAT)) AS average_digital_score FROM users.ft_combined_audits GROUP BY country;`
-
-**3. Simple Count**
-* **User:** Which 5 dealers have the most KOs?
-* **SQL:** `SELECT dealer_name, ko_count FROM users.ft_combined_audits ORDER BY ko_count DESC LIMIT 5;`
-
-**4. Date Filtering**
-* **User:** How many audits were performed in the second half of 2024?
-* **SQL:** `SELECT COUNT(*) FROM users.ft_combined_audits WHERE CAST(audit_date AS DATE) BETWEEN '2024-07-01' AND '2024-12-31';`
-
-**5. Advanced Question Lookup (Correct UNPIVOT Method)**
-* **User:** How many dealers got an 'OK' for 'Indoor cleanliness'?
-* SQL: `SELECT COUNT(DISTINCT ca.dealer_name) FROM users.ft_combined_audits AS ca JOIN users.ft_questions_metadata AS qm ON qm.question ILIKE '%Indoor cleanliness%', LATERAL jsonb_each_text(to_jsonb(ca)) AS answers WHERE answers.key = qm.mapping AND answers.value = 'OK';`
----
-
+**14. Best and Worst Ranking (NEW `UNION ALL` EXAMPLE)**
+* **User:** List out the worst and best performed Dealers in new vehicle activity
+* **SQL:** `(SELECT dealer_name, CAST(CAST(value AS INTEGER) AS DECIMAL(10, 2)) AS production_score, 'Best' AS result_type FROM users.dealer_stats WHERE LOWER(statistic) = 'new_vehicle_activity' AND value ~ '^\\d+$' ORDER BY CAST(value AS INTEGER) DESC FETCH FIRST 1 ROW WITH TIES) UNION ALL (SELECT dealer_name, CAST(CAST(value AS INTEGER) AS DECIMAL(10, 2)) AS production_score, 'Worst' AS result_type FROM users.dealer_stats WHERE LOWER(statistic) = 'new_vehicle_activity' AND value ~ '^\\d+$' ORDER BY CAST(value AS INTEGER) ASC FETCH FIRST 1 ROW WITH TIES);`
+ 
 **User question:** {input}
-""")
+"""
+)
 
 
 
 ROUTE_PROMPT_RENAULT = ChatPromptTemplate.from_template(
     """
-    You are an intelligent router for a Renault Dealer Quality Assessment chatbot.
-    Your job is to decide which data source to use for answering the user's question.
+    You are an expert router for a Renault Dealer Quality Assessment chatbot.
+    Your job is to decide which data source is best suited to answer the user's question.
 
     You have 3 possible tools:
 
-    1. file_vector_retrieve:
-       - Use this ONLY when the user is asking about specific textual details from the uploaded audit PDF.
-       - This includes summarization, explanations of text, descriptions, or anything that can be directly looked up
-         word-for-word in the file.
-       - Example:
-           "Summarize this audit report."
-           "What does the customer journey section say?"
-           "Tell me the steps mentioned in the order management process."
+    1.  **file_vector_retrieve:**
+        - Use this ONLY for questions about the general content or textual descriptions within a specific audit PDF.
+        - This is for summarization, explanations of sections, or finding descriptive text that is not a structured metric.
+        - Examples:
+            - "Summarize this audit report."
+            - "What does the customer journey section say?"
 
-    2. postgres_retrieve:
-       - Use this when the user is asking about aggregated statistics stored in the PostgreSQL database
-         (`ft_audits_concatanated` table).
-       - This is for numerical or categorical data that can be queried via SQL.
-       - Examples:
-           "What is the average global score for this country?"
-           "List all dealers with a product presentation score below 80%"
-           "Show average customer journey score across all dealers"
-           "Which dealer has the highest NV Renault Sales?"
+    2.  **postgres_retrieve:**
+        - Use this for any question that can be answered by querying the structured data in the `dealer_stats` or `dealer_qa_stats` tables.
+        - This includes scores, counts, averages, rankings, or filtering by specific criteria like auditor or country.
+        - It also includes questions about specific Q&A checks.
+        - Examples:
+            - "Which dealer has the highest restitution score?"
+            - "List all dealers audited by JULIE WUYTS."
+            - "How many dealers got more than 10 KOs?"
+            - "What is the average digital score?"
 
-    3. not_answerable:
-       - Use this if the question is unrelated to both the file content and the stored database metrics.
-       - Examples:
-           "What's the weather today?"
-           "Who is the CEO of Renault?"
-           "Tell me a joke."
+    3.  **not_answerable:**
+        - Use this if the question is unrelated to the audit report's content or the queryable database metrics.
+        - Examples:
+            - "What's the weather today?"
+            - "Who is the CEO of Renault?"
+            - "What will Renault's sales forecast be for next year?"
 
-    IMPORTANT:
-    - If the question clearly asks for a score, percentage, count, average, or dealer comparison → choose postgres_retrieve.
-    - If the question refers to "this document", "the file", or asks for explanation of audit sections → choose file_vector_retrieve.
-    - If none of the above applies → choose not_answerable.
+    ---
+    **Decision Rules (HIGHEST PRIORITY):**
+
+    - **GOLDEN RULE:** If the question contains keywords like **'score', 'average', 'count', 'highest', 'lowest', 'how many', 'list dealers',** or asks for a number, you **MUST** choose **`postgres_retrieve`**.
+    - If the question asks to summarize or explain "the document" or "the file" -> choose `file_vector_retrieve`.
+    - If none of the above apply -> choose `not_answerable`.
 
     Question: {question}
 
-    Respond with one of these EXACT values: "postgres_retrieve", "file_vector_retrieve", or "not_answerable".
+    Respond with ONLY ONE of the following exact values: "postgres_retrieve", "file_vector_retrieve", or "not_answerable".
     """
+)
+
+
+ANALYSIS_PROMPT = ChatPromptTemplate.from_template(
+"""
+You are an expert data analyst. Your task is to summarize the raw SQL data provided into a clear, insightful, and actionable narrative for the user.
+ 
+**User's Original Question:** {input}
+ 
+**SQL Query Result (JSON Table):**
+{db_results}
+ 
+---
+**CRITICAL OUTPUT FORMATTING RULES (HIGHEST PRIORITY):**
+1.  **Direct Answer (If Applicable):**
+    * If the original question is simple, direct, or only asks for a single piece of data (e.g., "What is the average score?", "Who is the auditor?"), your final output **MUST BE ONLY A SENTANCE**, without any explanation.
+2.  **Tabular Data Request:**
+    * If the question explicitly asks for a "list", "table", "all", or "show details for all," or if the SQL result naturally contains more than 3 rows/columns of simple values, you **MUST format the entire SQL Query Result** ({db_results}) **as a clean Markdown table** in your response. You can add narrative or summary also.
+3.  **Detailed Narrative/Reason Request (Diagnostic Mode):**
+    * If the question asks for a "reason", "why", "cause", "explain", "detail", or "breakdown," or if the SQL result contains `comment`, `question`, or `answer` columns (indicating diagnostic Q&A data), follow the detailed **Summary Instructions** below.
+ 
+    **Summary Instructions:**
+ 
+    1.  **Analyze Failures:** The primary goal is to explain why the score/performance (related to the original question) might be low. Focus heavily on records where the 'answer' is **'KO'**.explain in detail with each comment.
+    2.  **Extract Key Issues:** Review the 'question' and 'comment' columns for all 'KO' records. Synthesize the comments to identify 2-3 **major themes or recurring issues** that explain the failures.Similiarly for explaining success you should review the columns of all 'OK' answers.
+    3.  **Use Comments:** The 'comment' column contains the auditor's key context and reasoning. You **MUST** use this information to provide specific, textual evidence in your summary. Do not simply list the questions.
+    4.  **Acknowledge Successes (Briefly):** Briefly mention any patterns of success where the 'answer' is 'OK' if it adds meaningful context.
+    5.  * You DO NOT need to show the table unless it is asked seperately.
+    6.  **Ignore Missing Data:**
+        * If the 'db_results' contains no records, state that no specific issues were found for the requested diagnostic breakdown.
+        * If the 'db_results' contains records, but ALL answers are 'OK' (i.e., no 'KO's are present), you MUST begin the response with a statement affirming the high performance, such as: "The performance is quite high." and fetch the curresponding statistic score.
+---
+ 
+"""
 )

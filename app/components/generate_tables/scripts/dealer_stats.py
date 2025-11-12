@@ -196,20 +196,20 @@ def get_dealer_stats(data_high_level, data_detailed, digital_data, digital_table
     try:
         dealer_stat = {}
        
-        dealer_stat["name1"] = detect_stats_high_level("Dealer name","Dealer code",0, data_high_level)
-        dealer_stat["address_full"] = detect_stats_high_level("Location","RRG",1, data_high_level)
-        dealer_stat["dealer_code"]  = detect_stats_high_level("Dealer code","NV Renault Sales / year",0, data_high_level)
-        dealer_stat["RRG"]  = detect_stats_high_level("RRG","NV Dacia Sales / Year",1, data_high_level)
-        dealer_stat["Renault_sales_by_yr"] = detect_stats_high_level("NV Renault Sales / year","Workshop Customers / Day",0, data_high_level)
-        dealer_stat["Dacia_sales_by_yr"] = detect_stats_high_level("NV Dacia Sales / Year","Principal Audited Brand",1, data_high_level)
-        dealer_stat["Workshop Customers/day"] = detect_stats_high_level("Workshop Customers / Day","Auditor",0, data_high_level)
-        dealer_stat['Global_Score'] = get_global_score(data_high_level)
-        dealer_stat["Auditor"] = detect_stats_high_level("Auditor","",0, data_high_level,1)
+        # dealer_stat["dealer_name"] = detect_stats_high_level("Dealer name","Dealer code",0, data_high_level)
+        # dealer_stat["address_full"] = detect_stats_high_level("Location","RRG",1, data_high_level)
+        # dealer_stat["dealer_code"]  = detect_stats_high_level("Dealer code","NV Renault Sales / year",0, data_high_level)
+        dealer_stat["rrg"]  = detect_stats_high_level("RRG","NV Dacia Sales / Year",1, data_high_level)
+        dealer_stat["renault_sales_per_year"] = detect_stats_high_level("NV Renault Sales / year","Workshop Customers / Day",0, data_high_level)
+        dealer_stat["dacia_sales_per_year"] = detect_stats_high_level("NV Dacia Sales / Year","Principal Audited Brand",1, data_high_level)
+        dealer_stat["workshop_customers_per_day"] = detect_stats_high_level("Workshop Customers / Day","Auditor",0, data_high_level)
+        dealer_stat['global_Score'] = get_global_score(data_high_level)
+        # dealer_stat["auditor"] = detect_stats_high_level("Auditor","",0, data_high_level,1)
         dealer_stat["audit_date"] = detect_stats_high_level("Audit Date","",1, data_high_level,1)
  
         dealer_stat['new_vehicle_activity'] = detect_stats_detailed("NEW VEHICLES ACTIVITY", data_detailed,'right')
         dealer_stat['aftersales_activity'] = detect_stats_detailed("AFTERSALES ACTIVITY", data_detailed,'right') #
-        dealer_stat['appointment_booking'] = detect_stats_detailed("APPOINTMENT BOOKING / PREPARATION", data_detailed)
+        dealer_stat['appointment_booking_per_preparation'] = detect_stats_detailed("APPOINTMENT BOOKING / PREPARATION", data_detailed)
         dealer_stat['customer_journey'] = detect_stats_detailed("CUSTOMER JOURNEY", data_detailed)
         dealer_stat['product_presentation'] = detect_stats_detailed("PRODUCT PRESENTATION", data_detailed)
         dealer_stat['reception'] = detect_stats_detailed("RECEPTION", data_detailed)
@@ -217,11 +217,11 @@ def get_dealer_stats(data_high_level, data_detailed, digital_data, digital_table
         dealer_stat['production'] = detect_stats_detailed("PRODUCTION", data_detailed)
  
         if data_detailed['Detailed Report'].str.contains("PREPARATION / DELIVERY").any():
-            dealer_stat['preperation_delivery'] = detect_stats_detailed("PREPARATION / DELIVERY", data_detailed)
+            dealer_stat['preperation_per_delivery'] = detect_stats_detailed("PREPARATION / DELIVERY", data_detailed)
         elif data_detailed['Detailed Report'].str.contains("Preparation / Delivery").any():
-            dealer_stat['preperation_delivery'] = detect_stats_detailed("Preparation / Delivery", data_detailed)
+            dealer_stat['preperation_per_delivery'] = detect_stats_detailed("Preparation / Delivery", data_detailed)
         dealer_stat['restitution'] = detect_stats_detailed("RESTITUTION", data_detailed)
-        dealer_stat['management1'], dealer_stat['management2'] = detect_management_detailed(data_detailed)
+        dealer_stat['new_vehicle_activity_management'], dealer_stat['aftersales_activity_management'] = detect_management_detailed(data_detailed)
         dealer_stat['basics_sales_methods'] = detect_stats_detailed("Basics Sales Methods", data_detailed)
         dealer_stat['brand_store_renault'] = detect_stats_detailed("BRAND STORE RENAULT", data_detailed)
         dealer_stat['basics_aftersales_methods'] = detect_stats_detailed("Basics Aftersales Methods", data_detailed)
@@ -257,19 +257,10 @@ def get_dealer_stats(data_high_level, data_detailed, digital_data, digital_table
    
  
         dealer_stat = pd.DataFrame(dealer_stat.items(), columns = ['statistic', 'value'])
-       
-        # file transformation
-        dealer_stat1 = dealer_stat.T
-        dealer_stat1.columns = dealer_stat1.iloc[0]
-        dealer_stat1 = dealer_stat1[1:].reset_index(drop=True)
-        dealer_stat1["Country"] = dealer_stat1["address_full"].str.split(",").str[-1].str.strip()
-        dealer_stat1=dealer_stat1.rename(columns={"name1":"dealer_name"})
-   
  
  
-        return dealer_stat1
+        return dealer_stat
        
    
     except Exception as exception:
         print(exception)
- 

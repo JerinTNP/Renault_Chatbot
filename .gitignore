@@ -6,3 +6,5 @@ venv/
 vectorstore/
 app/components/generate_tables/data
 /logs/
+mass_upload_files
+mass_upload_api_results.csv

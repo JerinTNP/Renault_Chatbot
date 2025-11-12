@@ -9,6 +9,7 @@ import os
 # --- Configuration ---
 
 API_BASE_URL = "http://127.0.0.1:8000"
+# API_URL = "https://backend-url.ngrok-free.app/chat"
 API_KEY = "a8861fce-c6e4-489e-9426-a8b12eca8c70" 
 
 # --- API Helper Functions ---
@@ -63,9 +64,15 @@ def display_response(data):
         st.markdown(data)
         content_to_store = data
     elif isinstance(data, list) and all(isinstance(item, dict) for item in data):
-        df = pd.DataFrame(data)
-        st.dataframe(df)
-        content_to_store = df.to_markdown(index=False)
+        if not data:
+            message = "I couldn't find any results that match your criteria. 🤷"
+            st.markdown(message)
+            content_to_store = message
+        else:
+            # If the list is not empty, display the DataFrame as before
+            df = pd.DataFrame(data)
+            st.dataframe(df)
+            content_to_store = df.to_markdown(index=False)
     elif isinstance(data, (dict, list)):
         st.json(data)
         content_to_store = f"```json\n{json.dumps(data, indent=2)}\n```"
