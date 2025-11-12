@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import shutil
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status, Body, Form, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status, Body, Form
 from typing import List
 import uuid
 from datetime import datetime,timezone
@@ -263,6 +263,191 @@ async def embed_pdf(
 
 ############ table gen ##################
 
+# @router.post("/generate-tables")
+# async def generate_tables(
+#     valid_api_key: bool = Depends(auth_info.validate_api_key),
+#     chatid: str = Form(None),
+#     gu_id: str = Form(None),
+#     db: Session = Depends(get_db)
+# ) -> JSONResponse:
+#     """
+#     Endpoint to process uploaded PDF → run generate_table.py → 
+#     store extracted KPI/value pairs in ft_audits_concatanated.
+    
+#     Parameters:
+#         valid_api_key (bool): API key validation
+#         chatid (UUID4): Unique identifier of the chat session
+#         gu_id (UUID4): Unique identifier of the file
+    
+#     Returns:
+#         JSONResponse with status, message, and row count
+#     """
+#     try:
+#         if gu_id is None:
+#             logging.error("FileID not provided, rolling back")
+#             db.rollback()
+#             return JSONResponse(
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#                 content={
+#                     "message": "FileID not provided. Please upload again.",
+#                     "error": True,
+#                     "data": []
+#                 }
+#             )
+
+#         chatid = str(chatid)
+#         gu_id = str(gu_id)
+
+#         # Check if file already processed
+#         existing = db.query(DealerStats).filter_by(file_id=gu_id).first()
+#         if existing:
+#             logging.info(f"file was already processed: {gu_id}")
+#             return JSONResponse(
+#                 status_code=status.HTTP_208_ALREADY_REPORTED,
+#                 content={
+#                     "message": f"File {gu_id} already processed",
+#                     "error": False,
+#                     "data": []
+#                 }
+#             )
+
+#         logging.info(f"New file - starting table generation: {gu_id}")
+
+#         uploaded_file_record = db.query(UploadFileInfo).filter_by(file_id=gu_id).first()
+#         if not uploaded_file_record:
+#             return JSONResponse(
+#                 status_code=status.HTTP_404_NOT_FOUND,
+#                 content={"message": "File record not found in DB", "error": True, "data": []}
+#             )
+        
+#         filename = uploaded_file_record.file_name
+
+#         # Prepare input path
+#         input_dir = "app/components/generate_tables/data/input"
+#         os.makedirs(input_dir, exist_ok=True)
+#         file_path = os.path.join(input_dir, filename)
+
+
+#         sharepoint_file_path = uploaded_file_record.file_path
+#         parsed_url = urlparse(sharepoint_file_path)
+#         # Server-relative path
+#         server_relative_path = unquote(parsed_url.path)  # decode %20 to spaces, etc.
+#         logging.info(f"Downloading SharePoint file {sharepoint_file_path} → {file_path}")
+        
+#         try:
+#             ctx = get_sharepoint_context()
+#             with open(file_path, "wb") as local_file:
+#                 ctx.web.get_file_by_server_relative_url(server_relative_path).download(local_file).execute_query()
+#             logging.info("File downloaded successfully from SharePoint.")
+#         except Exception as e:
+#             logging.error(f"Error downloading from SharePoint: {e}")
+#             return JSONResponse(
+#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#                 content={"message": f"Error downloading file: {str(e)}", "error": True, "data": []}
+#             )
+        
+#         # Process the file
+#         print("Starting Process the file")
+#         dealer_stats_df, dealer_qa_stats_df =  generate_table.start_automation()
+#         print("start automation ran succesfully")
+#         rows_inserted = 0
+
+
+#     # --- DB INJECTION FOR TABLE 1: dealer_stats ---
+#         logging.info(f"Inserting {len(dealer_stats_df)} rows into dealer_stats table.")
+#         total_rows_inserted = 0
+#         for _, row in dealer_stats_df.iterrows():
+#             # Create a new record using the DealerStats model
+#             record = DealerStats(
+#                 # --- Pre-defined values ---
+#                 file_id=gu_id,
+#                 chat_id=chatid,
+
+#                 # --- Columns mapped from the dealer_stats_df row ---
+#                 statistic=row.get('statistic'),
+#                 value=row.get('value'),
+#                 dealer_name=row.get('dealer_name'),
+#                 dealer_code=row.get('dealer_code'),
+#                 country=row.get('country'),
+#                 address_full=row.get('address_full'),
+#                 file_name=row.get('filename'),
+#                 auditor=row.get('auditor')
+
+
+#             )
+#             db.add(record)
+#         total_rows_inserted += len(dealer_stats_df)
+
+#         # --- DB INJECTION FOR TABLE 2: dealer_qa_stats ---
+#         logging.info(f"Inserting {len(dealer_qa_stats_df)} rows into dealer_qa_stats table.")
+#         for _, row in dealer_qa_stats_df.iterrows():
+#             # Create a new record using the DealerQaStats model
+#             record = DealerQaStats(
+#                 # --- Pre-defined values ---
+#                 file_id=gu_id, # You'll likely want to add file_id and chat_id to this table too
+#                 chat_id=chatid,
+
+#                 # --- Columns mapped from the dealer_qa_stats_df row ---
+#                 dealer_name=row.get('dealer_name'),
+#                 dealer_code=row.get('dealer_code'),
+#                 file_name=row.get('filename'),
+#                 country=row.get('country'),
+#                 auditor=row.get('auditor'),
+#                 question=row.get('question'),
+#                 answer=row.get('answer'),
+#                 comment=row.get('comment'),
+#                 tag_1=row.get('tag_1'),
+#                 subtag_1=row.get('subtag_1'),
+#                 item_1=row.get('item_1'),
+#                 subtag_2=row.get('subtag_2')
+#             )
+#             db.add(record)
+#         total_rows_inserted += len(dealer_qa_stats_df)
+
+#         # --- Final Commit ---
+#         # Commit all the new records for both tables to the database at once
+#         db.commit()
+
+#         print(f"✅ Successfully inserted a total of {total_rows_inserted} rows into the database.")
+
+#         # Cleanup input file
+#         if os.path.exists(file_path):
+#             os.remove(file_path)
+#             logging.info("input file deleted from temporary folder")
+
+#         # output_dir = "app/components/generate_tables/data/output"
+#         # outputfilepath = os.path.join(output_dir, 'audits_concatenated.xlsx')
+
+#         # # Cleanup output file
+#         # if os.path.exists(outputfilepath):
+#         #     os.remove(outputfilepath)
+#         #     logging.info("output excel deleted from temporary folder")
+
+#         # At the end of /generate-tables after successful processing
+#         if chatid in utils.chat_sessions:
+#             utils.chat_sessions[chatid]["tables_done"] = True
+#             logging.info(f"Table generation completed for chatid={chatid}")
+
+
+#         return JSONResponse(
+#             status_code=status.HTTP_200_OK,
+#             content={
+#                 "message": f"File {gu_id} processed successfully",
+#                 "error": False,
+#                 "data": {"rows_inserted": rows_inserted}
+#             }
+#         )
+
+
+#     except Exception as e:
+#         db.rollback()
+#         logging.error(f"Error in /generate-tables: {e}")
+#         return JSONResponse(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             content={"message": "Internal error in table generation", "error": True, "data": []}
+#         )
+    
+
 @router.post("/generate-tables")
 async def generate_tables(
     valid_api_key: bool = Depends(auth_info.validate_api_key),
@@ -271,28 +456,18 @@ async def generate_tables(
     db: Session = Depends(get_db)
 ) -> JSONResponse:
     """
-    Endpoint to process uploaded PDF → run generate_table.py → 
-    store extracted KPI/value pairs in ft_audits_concatanated.
-    
-    Parameters:
-        valid_api_key (bool): API key validation
-        chatid (UUID4): Unique identifier of the chat session
-        gu_id (UUID4): Unique identifier of the file
-    
-    Returns:
-        JSONResponse with status, message, and row count
+    Endpoint to process uploaded PDF -> run generate_table.py
     """
+    # Initialize file_path to None so we can check it in the finally block
+    file_path = None 
+
     try:
         if gu_id is None:
             logging.error("FileID not provided, rolling back")
             db.rollback()
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                content={
-                    "message": "FileID not provided. Please upload again.",
-                    "error": True,
-                    "data": []
-                }
+                content={"message": "FileID not provided. Please upload again.", "error": True, "data": []}
             )
 
         chatid = str(chatid)
@@ -304,11 +479,7 @@ async def generate_tables(
             logging.info(f"file was already processed: {gu_id}")
             return JSONResponse(
                 status_code=status.HTTP_208_ALREADY_REPORTED,
-                content={
-                    "message": f"File {gu_id} already processed",
-                    "error": False,
-                    "data": []
-                }
+                content={"message": f"File {gu_id} already processed", "error": False, "data": []}
             )
 
         logging.info(f"New file - starting table generation: {gu_id}")
@@ -327,12 +498,11 @@ async def generate_tables(
         os.makedirs(input_dir, exist_ok=True)
         file_path = os.path.join(input_dir, filename)
 
-
         sharepoint_file_path = uploaded_file_record.file_path
         parsed_url = urlparse(sharepoint_file_path)
-        # Server-relative path
-        server_relative_path = unquote(parsed_url.path)  # decode %20 to spaces, etc.
-        logging.info(f"Downloading SharePoint file {sharepoint_file_path} → {file_path}")
+        server_relative_path = unquote(parsed_url.path)
+        
+        logging.info(f"Downloading SharePoint file {sharepoint_file_path} -> {file_path}")
         
         try:
             ctx = get_sharepoint_context()
@@ -346,108 +516,95 @@ async def generate_tables(
                 content={"message": f"Error downloading file: {str(e)}", "error": True, "data": []}
             )
         
-        # Process the file
-        print("Starting Process the file")
-        dealer_stats_df, dealer_qa_stats_df =  generate_table.start_automation()
-        print("start automation ran succesfully")
-        rows_inserted = 0
+        # --- START OF TRY/FINALLY BLOCK FOR PROCESSING ---
+        try:
+            # Process the file
+            print("Starting Process the file")
+            dealer_stats_df, dealer_qa_stats_df = generate_table.start_automation()
+            
+            # Safety check if automation returns None
+            if dealer_stats_df is None or dealer_qa_stats_df is None:
+                 raise ValueError("Table automation returned None/Empty data.")
 
+            print("start automation ran succesfully")
+            rows_inserted = 0
 
-    # --- DB INJECTION FOR TABLE 1: dealer_stats ---
-        logging.info(f"Inserting {len(dealer_stats_df)} rows into dealer_stats table.")
-        total_rows_inserted = 0
-        for _, row in dealer_stats_df.iterrows():
-            # Create a new record using the DealerStats model
-            record = DealerStats(
-                # --- Pre-defined values ---
-                file_id=gu_id,
-                chat_id=chatid,
+            # ... (Your DB Insertion Logic for dealer_stats ...)
+            logging.info(f"Inserting {len(dealer_stats_df)} rows into dealer_stats table.")
+            for _, row in dealer_stats_df.iterrows():
+                record = DealerStats(
+                    file_id=gu_id,
+                    chat_id=chatid,
+                    statistic=row.get('statistic'),
+                    value=row.get('value'),
+                    dealer_name=row.get('dealer_name'),
+                    dealer_code=row.get('dealer_code'),
+                    country=row.get('country'),
+                    address_full=row.get('address_full'),
+                    file_name=row.get('filename'),
+                    auditor=row.get('auditor')
+                )
+                db.add(record)
+            
+            # ... (Your DB Insertion Logic for dealer_qa_stats ...)
+            logging.info(f"Inserting {len(dealer_qa_stats_df)} rows into dealer_qa_stats table.")
+            for _, row in dealer_qa_stats_df.iterrows():
+                record = DealerQaStats(
+                    file_id=gu_id,
+                    chat_id=chatid,
+                    dealer_name=row.get('dealer_name'),
+                    dealer_code=row.get('dealer_code'),
+                    file_name=row.get('filename'),
+                    country=row.get('country'),
+                    auditor=row.get('auditor'),
+                    question=row.get('question'),
+                    answer=row.get('answer'),
+                    comment=row.get('comment'),
+                    tag_1=row.get('tag_1'),
+                    subtag_1=row.get('subtag_1'),
+                    item_1=row.get('item_1'),
+                    subtag_2=row.get('subtag_2')
+                )
+                db.add(record)
 
-                # --- Columns mapped from the dealer_stats_df row ---
-                statistic=row.get('statistic'),
-                value=row.get('value'),
-                dealer_name=row.get('dealer_name'),
-                dealer_code=row.get('dealer_code'),
-                country=row.get('country'),
-                address_full=row.get('address_full'),
-                file_name=row.get('filename'),
-                auditor=row.get('auditor')
+            db.commit()
+            print(f"✅ Successfully inserted rows.")
 
+            if chatid in utils.chat_sessions:
+                utils.chat_sessions[chatid]["tables_done"] = True
+                logging.info(f"Table generation completed for chatid={chatid}")
 
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "message": f"File {gu_id} processed successfully",
+                    "error": False,
+                    "data": {"rows_inserted": rows_inserted}
+                }
             )
-            db.add(record)
-        total_rows_inserted += len(dealer_stats_df)
 
-        # --- DB INJECTION FOR TABLE 2: dealer_qa_stats ---
-        logging.info(f"Inserting {len(dealer_qa_stats_df)} rows into dealer_qa_stats table.")
-        for _, row in dealer_qa_stats_df.iterrows():
-            # Create a new record using the DealerQaStats model
-            record = DealerQaStats(
-                # --- Pre-defined values ---
-                file_id=gu_id, # You'll likely want to add file_id and chat_id to this table too
-                chat_id=chatid,
+        except Exception as e:
+            # If processing fails, rollback DB but allow finally to run
+            db.rollback()
+            logging.error(f"Error in processing/DB: {e}")
+            raise e # Re-raise to be caught by the outer except block
 
-                # --- Columns mapped from the dealer_qa_stats_df row ---
-                dealer_name=row.get('dealer_name'),
-                dealer_code=row.get('dealer_code'),
-                file_name=row.get('filename'),
-                country=row.get('country'),
-                auditor=row.get('auditor'),
-                question=row.get('question'),
-                answer=row.get('answer'),
-                comment=row.get('comment'),
-                tag_1=row.get('tag_1'),
-                subtag_1=row.get('subtag_1'),
-                item_1=row.get('item_1'),
-                subtag_2=row.get('subtag_2')
-            )
-            db.add(record)
-        total_rows_inserted += len(dealer_qa_stats_df)
-
-        # --- Final Commit ---
-        # Commit all the new records for both tables to the database at once
-        db.commit()
-
-        print(f"✅ Successfully inserted a total of {total_rows_inserted} rows into the database.")
-
-        # Cleanup input file
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            logging.info("input file deleted from temporary folder")
-
-        # output_dir = "app/components/generate_tables/data/output"
-        # outputfilepath = os.path.join(output_dir, 'audits_concatenated.xlsx')
-
-        # # Cleanup output file
-        # if os.path.exists(outputfilepath):
-        #     os.remove(outputfilepath)
-        #     logging.info("output excel deleted from temporary folder")
-
-        # At the end of /generate-tables after successful processing
-        if chatid in utils.chat_sessions:
-            utils.chat_sessions[chatid]["tables_done"] = True
-            logging.info(f"Table generation completed for chatid={chatid}")
-
-
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "message": f"File {gu_id} processed successfully",
-                "error": False,
-                "data": {"rows_inserted": rows_inserted}
-            }
-        )
-
+        finally:
+            # --- THIS RUNS ALWAYS (Success or Failure) ---
+            if file_path and os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    logging.info(f"CLEANUP: Input file deleted: {file_path}")
+                except Exception as cleanup_err:
+                    logging.error(f"CLEANUP ERROR: Could not delete file {file_path}: {cleanup_err}")
 
     except Exception as e:
-        db.rollback()
-        logging.error(f"Error in /generate-tables: {e}")
+        # This catches the re-raised exception
+        logging.error(f"Final Error in /generate-tables: {e}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"message": "Internal error in table generation", "error": True, "data": []}
         )
-    
-    
 
 
 

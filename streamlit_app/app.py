@@ -6,14 +6,14 @@ import pandas as pd
 import json
 import os 
 
-# --- Configuration ---
 
-API_BASE_URL = "http://127.0.0.1:8000"
-# API_URL = "https://backend-url.ngrok-free.app/chat"
-API_KEY = "a8861fce-c6e4-489e-9426-a8b12eca8c70" 
+# To this:
+# This allows Docker to inject the internal container URL
+API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
+API_KEY = os.getenv("API_KEY", "a8861fce-c6e4-489e-9426-a8b12eca8c70")
+
 
 # --- API Helper Functions ---
-
 def call_api(endpoint, method="post", files=None, data=None, json_payload=None):
     """A generalized function to handle all API calls."""
     headers = {'access-token': API_KEY}
