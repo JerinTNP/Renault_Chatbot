@@ -6,12 +6,11 @@ WORKDIR /code
 
 # Install system dependencies required for PDF processing (Camelot/Poppler)
 RUN apt-get update && \
-    apt-get install -y poppler-utils build-essential libgl1-mesa-glx ghostscript && \
+    apt-get install -y poppler-utils build-essential libgl1 ghostscript git libffi-dev libglib2.0-0 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
-# Based on your screenshot, you have a combined file
 COPY combined_requirements.txt .
 
 # Install Python dependencies

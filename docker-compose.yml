@@ -1,46 +1,49 @@
-version: '3.8'
+# version: '3.8'
 
 services:
+  # --- DATABASE SERVICE ---
+  db:
+    image: postgres:15
+    container_name: renault_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Host mode: Binds directly to localhost:5432 on the server.
+    # ⚠️ MAKE SURE port 5432 is free on this server!
+    network_mode: "host"
+
   # --- BACKEND SERVICE ---
   backend:
     build: .
     container_name: renault_backend
-    # Command to start FastAPI from the root directory
+    # Run uvicorn directly
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     volumes:
-      # 1. Persist the Vectorstore (Crucial!)
       - vectorstore_volume:/code/vectorstore
-      # 2. Persist the uploaded files folder (Optional but recommended)
-      - uploaded_files_volume:/code/app/mass_upload_files
+      # You can remove the mass_upload_files volume if you aren't using it on the server
     env_file:
-      - .env  # Loads your existing .env file
-    ports:
-      - "8000:8000"
-    networks:
-      - chatbot_net
+      - .env
+    network_mode: "host"
+    # --- ADD THIS ---
+    depends_on:
+      - db
+    # ----------------
 
   # --- FRONTEND SERVICE ---
   frontend:
     build: .
     container_name: renault_frontend
-    # Command to start Streamlit
     command: streamlit run streamlit_app/app.py --server.port=8501 --server.address=0.0.0.0
     environment:
-      # Docker networking: points to the 'backend' service name defined above
-      - API_BASE_URL=http://backend:8000
-    ports:
-      - "8501:8501"
+      - API_BASE_URL=http://localhost:8000
+    network_mode: "host"
     depends_on:
       - backend
-    networks:
-      - chatbot_net
 
-# Define the storage volumes
 volumes:
   vectorstore_volume:
-  uploaded_files_volume:
-
-# Define the private network
-networks:
-  chatbot_net:
-    driver: bridge
+  postgres_data:

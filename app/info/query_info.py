@@ -13,6 +13,7 @@ class QueryInfo(BaseModel):
     """
     query: Annotated[str, StringConstraints(strip_whitespace=True)]
     chatid: Union[UUID4, Literal[""]]
+    chat_mode: str = "database"
 
 # Pydantic model for response
 class FileResponse(BaseModel):
